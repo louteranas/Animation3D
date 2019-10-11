@@ -1,0 +1,117 @@
+#version 430 core
+
+layout(binding = 0, rgba32f) uniform writeonly image2D framebuffer;
+
+uniform sampler2D colorTexture;
+uniform mat4 mat_inverse;
+uniform mat4 persp_inverse;
+uniform float lightIntensity;
+uniform vec3 lightPosition;
+uniform float shininess;
+uniform float eta;
+uniform vec3 bbmin;
+uniform vec3 bbmax;
+uniform float radius;
+uniform float groundDistance;
+uniform vec3 center;
+
+#define MAX_SCENE_BOUNDS    10.0
+#define EPS                 0.000001
+
+
+struct hitinfo_t {
+    vec4 t;
+    int hit_vptr;
+};
+
+layout (std430, binding = 1) buffer Vertices
+{
+    vec4 vertices[];
+};
+
+layout (std430, binding = 2) buffer Normals
+{
+    vec4 normals[];
+};
+
+layout (std430, binding = 3) buffer Colors
+{
+    vec4 colors[];
+};
+
+layout (std430, binding = 4) buffer Meshes
+{
+    int indices[];
+};
+
+bool intersectBoundingBox(vec4 origin, vec4 dir) {
+	// TODO
+    return false;
+}
+
+bool intersectTriangle(vec4 origin, vec4 dir, int ptr, out vec4 dist) 
+{
+	// TODO
+    return false;
+}
+
+vec4 interpolateNormal(hitinfo_t h)
+{
+	// TODO
+    return vec4(1);
+}
+
+vec4 interpolateColor(hitinfo_t h)
+{
+	// TODO
+	return vec4(1);
+}
+
+bool isIntersected(vec4 origin, vec4 dir, out hitinfo_t h)
+{
+    vec4 dist; // stores distance + barycentric coord
+	bool hit = false;
+	h.t.x = radius * MAX_SCENE_BOUNDS;
+	if(intersectBoundingBox(origin, dir)) {
+		for(int j = 0; j < indices.length(); j += 3) {
+			if(intersectTriangle(origin, dir, j, dist)) {
+				// TODO
+			}
+		}
+	}
+	return hit;
+}
+
+const int MAX_TRACE = 1;
+
+
+vec4 trace(vec4 origin, vec4 dir)
+{
+	// TODO: trace a ray in the scene, see what it intersects, bounce around
+    return vec4(1);
+}
+
+layout (local_size_x = 8, local_size_y = 8) in;
+void main(void) {
+    ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(framebuffer);
+    if (pix.x >= size.x || pix.y >= size.y) {
+        return;
+    }
+    vec2 pos = pix / (size - vec2(0.5,0.5)); 
+    // pos in [0,1]^2 Need it in [-1,1]^2:
+    pos = 2 * pos - vec2(1.,1.);
+
+    // Step 1: I need pixel coordinates. 
+    vec4 worldPos = vec4(pos.x, pos.y, 1.0, 1.0);
+    worldPos = persp_inverse * worldPos;
+    worldPos /= worldPos.w;
+    worldPos.w = 0;
+    worldPos = normalize(worldPos);
+    // Step 2: ray direction:
+    vec4 dir = normalize((mat_inverse * worldPos));
+    vec4 eye = (mat_inverse * vec4(0, 0, 0, 1));
+    vec4 color = trace(eye, dir);
+
+    imageStore(framebuffer, pix, color);
+}
