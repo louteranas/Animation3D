@@ -24,8 +24,19 @@ void main( void )
     else vertColor = color;
     vertNormal.xyz = normalize(normalMatrix * normal.xyz);
     vertNormal.w = 0.0;
+    // lightPosCS is light position in camera space coords
+    vec4 lightPosCS = matrix * vec4(lightPosition,1);
+    vec4 vertexPositionCS = matrix * vertex;
+    /* TODO: compute eyeVector, lightVector. */
 
-    // TODO: compute eyeVector, lightVector. 
+    // VERY IMPORTANT : only GL position has to be converted to
+    // screen space, so all other calculus do not GET the perspective 
+    // matrix
+    
+    lightVector = normalize(vertexPositionCS - lightPosCS);
+    vec4 eyePosition = vec4(0.0, 0.0, 0.0, 1.0);
+    eyeVector = normalize(eyePosition - vertexPositionCS);
 
+    // gl_position is the vertex position in screen space
     gl_Position = perspective * matrix * vertex;
 }
