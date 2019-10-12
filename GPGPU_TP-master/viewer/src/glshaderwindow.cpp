@@ -8,7 +8,9 @@
 // Buttons/sliders for User interface:
 #include <QGroupBox>
 #include <QRadioButton>
+#include <QColorDialog>
 #include <QSlider>
+#include <QPushButton>
 #include <QLabel>
 // Layouts for User interface
 #include <QVBoxLayout>
@@ -212,6 +214,7 @@ void glShaderWindow::updateEta(int etaSliderValue)
     renderNow();
 }
 
+
 QWidget *glShaderWindow::makeAuxWindow()
 {
     if (auxWidget)
@@ -249,6 +252,13 @@ QWidget *glShaderWindow::makeAuxWindow()
     buttons->addWidget(groupBox2);
     outer->addLayout(buttons);
 
+    // Color picker
+    QColorDialog* colorPick = new QColorDialog();
+    outer->addWidget(colorPick);
+    QPushButton *colorButton = new QPushButton("Color picker");
+    connect(colorButton, SIGNAL(clicked()), this, SLOT(cout << "clicked"));
+    outer->addWidget(colorButton);
+
     // light source intensity
     QSlider* lightSlider = new QSlider(Qt::Horizontal);
     lightSlider->setTickPosition(QSlider::TicksBelow);
@@ -265,6 +275,8 @@ QWidget *glShaderWindow::makeAuxWindow()
     hboxLight->addWidget(lightLabelValue);
     outer->addLayout(hboxLight);
     outer->addWidget(lightSlider);
+
+
 
     // Phong shininess slider
     QSlider* shininessSlider = new QSlider(Qt::Horizontal);

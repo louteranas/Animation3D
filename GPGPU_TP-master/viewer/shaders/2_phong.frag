@@ -116,8 +116,10 @@ void main( void )
      vec4 specularLighting;
      float temp = specularLightingCT(cosThethaD, halfVector);
      if(blinnPhong)
+          // using the blinn phong model
           specularLighting = specularLightingBP(cosThethaD, halfVector);
      else
+          // using the cook torrance model
           specularLighting = specularLightingBP(cosThethaD, halfVector);
 
 
