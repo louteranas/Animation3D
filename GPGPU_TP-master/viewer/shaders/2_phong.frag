@@ -14,13 +14,31 @@ in vec4 lightSpace;
 
 out vec4 fragColor;
 
+/**
+* this fuction calculate the Fresnet Coefficient
+* For more details about the variable names, check the TP page
+**/
+float fresnetCoeff(float cosThethaD,  float eta){
+     // Ci coeff 
+     float Ci = pow((pow(eta, 2) - (1 - pow(cosThethaD, 2))), 0.5);
+     // Fs coef
+     float fracFs = (cosThethaD - Ci) / (cosThethaD + Ci);
+     float Fs = pow(abs(fracFs), 2);
+     // Fp coeff
+     float fracFp = (pow(eta,2)*cosThethaD - Ci) / (pow(eta,2)*cosThethaD + Ci);
+     float Fp = pow(abs(fracFp), 2);
+     ///// Fresnel coeff
+     float F = (Fs + Fp)/2;
+     return F;
+}
+
+
+
+
 void main( void )
 {
      // This is the place where there's work to be done
-
-     /// we must normalise vectors before using them 
-     //eyeVector = normalize(eyeVector);
-     //lightVector = normalize(lightVector);
+     /// we must normalise vectors before using them in case they change
      
 
      /***** AMBIENT LIGHT SETUP *******/
@@ -35,7 +53,7 @@ void main( void )
      // Diffuse reflection param 
      float Kd = 0.7;
      // setting the Diffuse lighting - Cd
-     vec4 diffuseLighting = Kd * vertColor * lightIntensity * max(0, dot(vertNormal, lightVector));
+     vec4 diffuseLighting = Kd * vertColor * lightIntensity * max(0, dot(vertNormal, normalize(lightVector)));
      
      
      /********** Specular light setup *********/
@@ -43,19 +61,19 @@ void main( void )
      // half Vector
      vec4 halfVector = normalize(lightVector + eyeVector);
      // ThetaD, angle between halfVector & lightVector we only need its cos value
-     float cosThethaD = dot(halfVector, lightVector);
-     // Ci coeff 
-     float Ci = pow((pow(eta, 2) - (1 - pow(cosThethaD, 2))), 0.5);
-     // Fs coef
-     float fracFs = (cosThethaD - Ci) / (cosThethaD + Ci);
-     float Fs = pow(abs(fracFs), 2);
-     // Fp coeff
-     float fracFp = (pow(eta,2)*cosThethaD - Ci) / (pow(eta,2)*cosThethaD + Ci);
-     float Fp = pow(abs(fracFp), 2);
-     ///// Fresnel coeff
-     float F = (Fs + Fp)/2;
+     float cosThethaD = dot(halfVector, lightVector); // /(length(halfVector)*length(lightVector)) ? what is the correct formula?;
      // setting the specular lighting - Cs
-     vec4 specularLighting = F * vertColor * pow(max(0, dot(vertNormal, halfVector)), shininess) * lightIntensity;
+     vec4 specularLighting = fresnetCoeff(cosThethaD, eta) * vertColor * pow(max(0, dot(vertNormal, halfVector)), shininess) * lightIntensity;
+
+     // ====> complexe eta ?
+
+
+     /********** Cook-Torrance model *********/
+
+
+     /************** 
+     object color is the sum of ambient, specular and diffuse lights with the object base color 
+     ***************/
      fragColor = ambientLight + diffuseLighting + specularLighting;
 
 
