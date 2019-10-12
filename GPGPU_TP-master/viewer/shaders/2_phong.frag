@@ -1,4 +1,5 @@
 #version 410
+#define PI 3.1415926538
 
 uniform float lightIntensity;
 uniform bool blinnPhong;
@@ -32,6 +33,33 @@ float fresnetCoeff(float cosThethaD,  float eta){
      return F;
 }
 
+/**
+* this fuction calculate the microfacet normal distribution D(thetaH)
+* For more details about the variable names, check the TP page
+**/
+bool indicatrice(float cosThetaH){
+     return true;
+}
+
+float NormalDistrib(float cosThetaH, float alpha){
+     if(!indicatrice(cosThetaH)){
+          return 0;
+     }
+     float frac1 = 1 / (pow(cosThetaH, 4) * PI);
+     float tanThetaSquare = (1 - pow(cosThetaH, 2))/pow(cosThetaH, 2);
+     float frac2 = pow(alpha, 2)/ pow((pow(alpha, 2) + pow(tanThetaSquare, 2)), 2);
+     return frac1 * frac2;
+}
+
+/**
+* this fuction calculate the GGX distribution G1(thetaI/thetaO)
+* For more details about the variable names, check the TP page
+**/
+float GGXDistrib(float cosTheta, float alpha){
+     float tanThetaSquare = (1 - pow(cosTheta, 2))/pow(cosTheta, 2);
+     float base = 1 + sqrt(1 + tanThetaSquare * pow(alpha, 2));
+     return 2 / base;
+}
 
 
 
@@ -69,7 +97,10 @@ void main( void )
 
 
      /********** Cook-Torrance model *********/
-
+     // Angles: thetaH, thetaI, thetaO
+     float thetaHcos = dot(vertNormal,halfVector);
+     float thetaIcos = dot(vertNormal,normalize(lightVector));
+     float thetaOcos = dot(vertNormal,normalize(eyeVector));
 
      /************** 
      object color is the sum of ambient, specular and diffuse lights with the object base color 
