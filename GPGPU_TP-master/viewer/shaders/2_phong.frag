@@ -61,6 +61,28 @@ float GGXDistrib(float cosTheta, float alpha){
      return 2 / base;
 }
 
+/**
+* this fuction calculate the specular lighting using the blinn-phing model
+* For more details about the variable names, check the TP page
+**/
+vec4 specularLightingBP(float cosThethaD, vec4 halfVector){
+     return fresnetCoeff(cosThethaD, eta) * vertColor * pow(max(0, dot(vertNormal, halfVector)), shininess) * lightIntensity;
+}
+
+/**
+* this fuction calculate the specular lighting using the cook-torrance model
+* For more details about the variable names, check the TP page
+**/
+float specularLightingCT(float cosThethaD, vec4 halfVector){
+     float alpha = 0.2;
+     float cosThetaH = dot(vertNormal,halfVector);
+     float cosThetaI = dot(vertNormal,normalize(lightVector));
+     float cosThetaO = dot(vertNormal,normalize(eyeVector));
+     float top = fresnetCoeff(cosThethaD, eta) * NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
+     float bottom = 4 * cosThetaI * cosThetaO;
+     return top/bottom;
+}
+
 
 
 void main( void )
@@ -91,16 +113,13 @@ void main( void )
      // ThetaD, angle between halfVector & lightVector we only need its cos value
      float cosThethaD = dot(halfVector, lightVector); // /(length(halfVector)*length(lightVector)) ? what is the correct formula?;
      // setting the specular lighting - Cs
-     vec4 specularLighting = fresnetCoeff(cosThethaD, eta) * vertColor * pow(max(0, dot(vertNormal, halfVector)), shininess) * lightIntensity;
+     vec4 specularLighting;
+     float temp = specularLightingCT(cosThethaD, halfVector);
+     if(blinnPhong)
+          specularLighting = specularLightingBP(cosThethaD, halfVector);
+     else
+          specularLighting = specularLightingBP(cosThethaD, halfVector);
 
-     // ====> complexe eta ?
-
-
-     /********** Cook-Torrance model *********/
-     // Angles: thetaH, thetaI, thetaO
-     float thetaHcos = dot(vertNormal,halfVector);
-     float thetaIcos = dot(vertNormal,normalize(lightVector));
-     float thetaOcos = dot(vertNormal,normalize(eyeVector));
 
      /************** 
      object color is the sum of ambient, specular and diffuse lights with the object base color 
