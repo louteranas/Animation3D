@@ -3,4 +3,8 @@ trimesh2/
 GPGPU_TP.pro
 viewer/*.pro
 viewer/*.o
-viewer/.cpp
+viewer/*.cpp
+viewer/*.h
+viewer/myViewer
+Makefile
+viewer/Makefile
