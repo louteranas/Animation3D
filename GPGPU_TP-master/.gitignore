@@ -1,2 +1,6 @@
 ### Base files/folders not to track for compiling issues due to differrent architecture types
-
+trimesh2/
+GPGPU_TP.pro
+viewer/*.pro
+viewer/*.o
+viewer/.cpp
