@@ -19,6 +19,9 @@
 #include <QDebug>
 #include <assert.h>
 
+#include <iostream>
+using namespace std;
+
 #include "perlinNoise.h" // defines tables for Perlin Noise
 
 glShaderWindow::glShaderWindow(QWindow *parent)
@@ -253,11 +256,41 @@ QWidget *glShaderWindow::makeAuxWindow()
     outer->addLayout(buttons);
 
     // Color picker
+
+    // j'ai rajouté une autre version et la récupération de la couleur
+
+    // en gros il y a 3 problèmes:
+    // 1) les couleurs ne s'actualisent pas quand on modifie dans le widget
+    //      il faut surement mettre des connect
+    // 2) ça ne va pas jusqu'au modèle car on a pas mis de update comme en dessous
+    //      il faut ajouter des variables green, blue, red dans la classe et les actualiser comme le 
+    //      update de shininess/lightIntensity
+    // 3) dans la version Alexis, c'est moche et ça prend trop de place
+    //      dans la version Anas, le boutton ne marche pas donc on peut pas modifier la couleur
+    
+    // VERSION ANAS
+    // QColorDialog* colorPick = new QColorDialog();
+    // outer->addWidget(colorPick);
+    // QPushButton *colorButton = new QPushButton("Color picker");
+    // connect(colorButton, SIGNAL(clicked()), this, SLOT(cout << "clicked"));
+    // outer->addWidget(colorButton);
+    // QColor color = colorPick->getColor(Qt::white);
+    // QRgb rgbColor = color.rgb();
+    // int blue = qBlue(rgbColor);
+    // int green = qGreen(rgbColor);
+    // int red = qRed(rgbColor);
+    // std::cout << red << "," << green << "," << blue << "\n";
+
+    // VERSION ALEXIS
     QColorDialog* colorPick = new QColorDialog();
+    colorPick->setOptions(QColorDialog::DontUseNativeDialog | QColorDialog::NoButtons);
     outer->addWidget(colorPick);
-    QPushButton *colorButton = new QPushButton("Color picker");
-    connect(colorButton, SIGNAL(clicked()), this, SLOT(cout << "clicked"));
-    outer->addWidget(colorButton);
+    QColor color = colorPick->getColor(Qt::white);
+    QRgb rgbColor = color.rgb();
+    int blue = qBlue(rgbColor);
+    int green = qGreen(rgbColor);
+    int red = qRed(rgbColor);
+    std::cout << red << "," << green << "," << blue << "\n";
 
     // light source intensity
     QSlider* lightSlider = new QSlider(Qt::Horizontal);

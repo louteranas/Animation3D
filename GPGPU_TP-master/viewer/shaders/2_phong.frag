@@ -38,7 +38,12 @@ float fresnetCoeff(float cosThethaD,  float eta){
 * For more details about the variable names, check the TP page
 **/
 bool indicatrice(float cosThetaH){
+     if(cosThetaH < 0){
+          return false;
+     }
      return true;
+     // maybe it's okay because theta is positive 
+     // if not, so the graph and lights are reversed and we have theta positive
 }
 
 float NormalDistrib(float cosThetaH, float alpha){
@@ -73,16 +78,15 @@ vec4 specularLightingBP(float cosThethaD, vec4 halfVector){
 * this fuction calculate the specular lighting using the cook-torrance model
 * For more details about the variable names, check the TP page
 **/
-float specularLightingCT(float cosThethaD, vec4 halfVector){
-     float alpha = 0.2;
+vec4 specularLightingCT(float cosThethaD, vec4 halfVector){
+     float alpha = 0.8;
      float cosThetaH = dot(vertNormal,halfVector);
      float cosThetaI = dot(vertNormal,normalize(lightVector));
      float cosThetaO = dot(vertNormal,normalize(eyeVector));
      float top = fresnetCoeff(cosThethaD, eta) * NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
      float bottom = 4 * cosThetaI * cosThetaO;
-     return top/bottom;
+     return (top/bottom)*vertColor;
 }
-
 
 
 void main( void )
@@ -91,12 +95,13 @@ void main( void )
      /// we must normalise vectors before using them in case they change
      
 
-     /***** AMBIENT LIGHT SETUP *******/
+     /********** Ambient light setup *********/
 
      // ambient reflection param 
      float Ka = 0.7;
      // setting the ambiantLighting - Ca
      vec4 ambientLight = Ka * vertColor * lightIntensity;
+
 
      /********** Diffuse light setup *********/
 
@@ -111,22 +116,20 @@ void main( void )
      // half Vector
      vec4 halfVector = normalize(lightVector + eyeVector);
      // ThetaD, angle between halfVector & lightVector we only need its cos value
-     float cosThethaD = dot(halfVector, lightVector); // /(length(halfVector)*length(lightVector)) ? what is the correct formula?;
+     float cosThethaD = dot(halfVector, lightVector); // /(length(halfVector)*length(lightVector)) ? what is the correct formula? OK because normalize :);
      // setting the specular lighting - Cs
      vec4 specularLighting;
-     float temp = specularLightingCT(cosThethaD, halfVector);
+     // float temp = specularLightingCT(cosThethaD, halfVector);
      if(blinnPhong)
           // using the blinn phong model
           specularLighting = specularLightingBP(cosThethaD, halfVector);
      else
           // using the cook torrance model
-          specularLighting = specularLightingBP(cosThethaD, halfVector);
+          specularLighting = specularLightingCT(cosThethaD, halfVector);
 
 
      /************** 
      object color is the sum of ambient, specular and diffuse lights with the object base color 
      ***************/
      fragColor = ambientLight + diffuseLighting + specularLighting;
-
-
 }
