@@ -48,6 +48,8 @@ public slots:
     void updateLightIntensity(int lightSliderValue);
     void updateShininess(int shininessSliderValue);
     void updateEta(int etaSliderValue);
+    void updateEtaComplex(int etaComplexSliderValue);
+
 
 protected:
     void mousePressEvent(QMouseEvent *e);
@@ -102,6 +104,7 @@ private:
     bool blinnPhong;
     bool transparent;
     float eta;
+    float etaComplex;
     float lightIntensity;
     float shininess;
     float lightDistance;
