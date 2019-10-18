@@ -19,7 +19,7 @@ out vec4 fragColor;
 * this fuction calculate the Fresnet Coefficient
 * For more details about the variable names, check the TP page
 **/
-float fresnetCoeff(float cosThethaD,  float eta){
+float fresnetCoeff(float cosThethaD){
      // Ci coeff 
      float Ci = pow((pow(eta, 2) - (1 - pow(cosThethaD, 2))), 0.5);
      // Fs coef
@@ -52,7 +52,7 @@ float NormalDistrib(float cosThetaH, float alpha){
      }
      float frac1 = 1 / (pow(cosThetaH, 4) * PI);
      float tanThetaSquare = (1 - pow(cosThetaH, 2))/pow(cosThetaH, 2);
-     float frac2 = pow(alpha, 2)/ pow((pow(alpha, 2) + pow(tanThetaSquare, 2)), 2);
+     float frac2 = pow(alpha/100, 2)/ pow((pow(alpha/100, 2) + pow(tanThetaSquare, 2)), 2);
      return frac1 * frac2;
 }
 
@@ -62,7 +62,7 @@ float NormalDistrib(float cosThetaH, float alpha){
 **/
 float GGXDistrib(float cosTheta, float alpha){
      float tanThetaSquare = (1 - pow(cosTheta, 2))/pow(cosTheta, 2);
-     float base = 1 + sqrt(1 + tanThetaSquare * pow(alpha, 2));
+     float base = 1 + sqrt(1 + tanThetaSquare * pow(alpha/100, 2));
      return 2 / base;
 }
 
@@ -71,21 +71,20 @@ float GGXDistrib(float cosTheta, float alpha){
 * For more details about the variable names, check the TP page
 **/
 vec4 specularLightingBP(float cosThethaD, vec4 halfVector){
-     return fresnetCoeff(cosThethaD, eta) * vertColor * pow(max(0, dot(vertNormal, halfVector)), shininess) * lightIntensity;
+     return fresnetCoeff(cosThethaD) * vertColor * pow(max(0, dot(vertNormal, halfVector)), shininess) * lightIntensity;
 }
 
 /**
 * this fuction calculate the specular lighting using the cook-torrance model
 * For more details about the variable names, check the TP page
 **/
-vec4 specularLightingCT(float cosThethaD, vec4 halfVector){
-     float alpha = 0.8;
+vec4 specularLightingCT(float cosThethaD, vec4 halfVector, float alpha){
      float cosThetaH = dot(vertNormal,halfVector);
-     float cosThetaI = dot(vertNormal,normalize(lightVector));
-     float cosThetaO = dot(vertNormal,normalize(eyeVector));
-     float top = fresnetCoeff(cosThethaD, eta) * NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
+     float cosThetaI = dot(vertNormal,lightVector);
+     float cosThetaO = dot(vertNormal,eyeVector);
+     float top = fresnetCoeff(cosThethaD) * NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
      float bottom = 4 * cosThetaI * cosThetaO;
-     return (top/bottom)*vertColor;
+     return (top/bottom)*vertColor*lightIntensity;
 }
 
 
@@ -93,7 +92,16 @@ void main( void )
 {
      // This is the place where there's work to be done
      /// we must normalise vectors before using them in case they change
-     
+
+     /********** Normalize *******************/
+     normalize(vertNormal);
+     normalize(eyeVector);
+     normalize(lightVector);
+
+     /********** alpha ***********************/
+     // alpha = 1-(shininess/200) in order to be between 0 and 1
+     // shininess and alpha reversed
+     float alpha = (2.-shininess/100);
 
      /********** Ambient light setup *********/
 
@@ -108,7 +116,7 @@ void main( void )
      // Diffuse reflection param 
      float Kd = 0.7;
      // setting the Diffuse lighting - Cd
-     vec4 diffuseLighting = Kd * vertColor * lightIntensity * max(0, dot(vertNormal, normalize(lightVector)));
+     vec4 diffuseLighting = Kd * vertColor * lightIntensity * max(0, dot(vertNormal, lightVector));
      
      
      /********** Specular light setup *********/
@@ -125,7 +133,7 @@ void main( void )
           specularLighting = specularLightingBP(cosThethaD, halfVector);
      else
           // using the cook torrance model
-          specularLighting = specularLightingCT(cosThethaD, halfVector);
+          specularLighting = specularLightingCT(cosThethaD, halfVector, alpha);
 
 
      /************** 

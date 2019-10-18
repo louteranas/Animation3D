@@ -268,18 +268,6 @@ QWidget *glShaderWindow::makeAuxWindow()
     // 3) dans la version Alexis, c'est moche et ça prend trop de place
     //      dans la version Anas, le boutton ne marche pas donc on peut pas modifier la couleur
     
-    // VERSION ANAS
-    // QColorDialog* colorPick = new QColorDialog();
-    // outer->addWidget(colorPick);
-    // QPushButton *colorButton = new QPushButton("Color picker");
-    // connect(colorButton, SIGNAL(clicked()), this, SLOT(cout << "clicked"));
-    // outer->addWidget(colorButton);
-    // QColor color = colorPick->getColor(Qt::white);
-    // QRgb rgbColor = color.rgb();
-    // int blue = qBlue(rgbColor);
-    // int green = qGreen(rgbColor);
-    // int red = qRed(rgbColor);
-    // std::cout << red << "," << green << "," << blue << "\n";
 
     // VERSION ALEXIS
     QColorDialog* colorPick = new QColorDialog();
