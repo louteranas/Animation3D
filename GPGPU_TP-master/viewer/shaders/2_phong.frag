@@ -5,6 +5,7 @@ uniform float lightIntensity;
 uniform bool blinnPhong;
 uniform float shininess;
 uniform float eta;
+uniform float etaComplex;
 uniform sampler2D shadowMap;
 
 in vec4 eyeVector;
@@ -16,10 +17,38 @@ in vec4 lightSpace;
 out vec4 fragColor;
 
 /**
+* this fuction calculate the Fresnet Coefficient when eta is complexe
+* For more details about the variable names, check the TP page
+**/
+float fresnetCoeffCmp(float cosThethaD){
+     // Ci coeff 
+     float etaCarreR = pow(eta, 2) - pow(etaComplex, 2);
+     float etaCarreI = 2 * eta * etaComplex;
+     float CiRcarre = etaCarreR - (1 - pow(cosThethaD, 2));
+     float CiImcarre = etaCarreI;
+     float CiRaison = pow(CiRcarre + CiImcarre, 0.25);
+     float CiArgum = 0.5 * atan(CiImcarre, CiRcarre);
+     // calcul Fs
+     float fracTopFsRaison = pow(pow(cosThethaD - (CiRaison*cos(CiArgum)),2) + pow(CiRaison * sin(CiArgum), 2), 0.5);
+     float fracBottomFsRaison = pow(pow(cosThethaD + (CiRaison*cos(CiArgum)),2) + pow(CiRaison * sin(CiArgum), 2), 0.5);
+     float Fs = pow(fracTopFsRaison/fracBottomFsRaison, 2);
+     // calcul Fp 
+     float fracTopFpRaison = pow(pow(etaCarreR*cosThethaD - CiRaison*cos(CiArgum),2) + pow(etaCarreI*cosThethaD - CiRaison * sin(CiArgum),2), 0.5);
+     float fracBottomFpRaison = pow(pow(etaCarreR*cosThethaD + CiRaison*cos(CiArgum),2) + pow(etaCarreI*cosThethaD + CiRaison * sin(CiArgum),2), 0.5);
+     float Fp = pow(fracTopFpRaison/fracBottomFpRaison, 2);
+     ///// Fresnel coeff
+     float F = (Fs + Fp)/2;
+     return F;
+}
+
+
+
+
+/**
 * this fuction calculate the Fresnet Coefficient
 * For more details about the variable names, check the TP page
 **/
-float fresnetCoeff(float cosThethaD){
+float fresnetCoeffRl(float cosThethaD){
      // Ci coeff 
      float Ci = pow((pow(eta, 2) - (1 - pow(cosThethaD, 2))), 0.5);
      // Fs coef
@@ -71,7 +100,10 @@ float GGXDistrib(float cosTheta, float alpha){
 * For more details about the variable names, check the TP page
 **/
 vec4 specularLightingBP(float cosThethaD, vec4 halfVector){
-     return fresnetCoeff(cosThethaD) * vertColor * pow(max(0, dot(vertNormal, halfVector)), shininess) * lightIntensity;
+     if(etaComplex > 0.1)
+          return fresnetCoeffCmp(cosThethaD) * vertColor * pow(max(0, dot(vertNormal, halfVector)), shininess) * lightIntensity;
+     else
+          return fresnetCoeffRl(cosThethaD) * vertColor * pow(max(0, dot(vertNormal, halfVector)), shininess) * lightIntensity;
 }
 
 /**
@@ -82,7 +114,9 @@ vec4 specularLightingCT(float cosThethaD, vec4 halfVector, float alpha){
      float cosThetaH = dot(vertNormal,halfVector);
      float cosThetaI = dot(vertNormal,lightVector);
      float cosThetaO = dot(vertNormal,eyeVector);
-     float top = fresnetCoeff(cosThethaD) * NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
+     float top = fresnetCoeffRl(cosThethaD) * NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
+     if(etaComplex > 0.1)
+          top = fresnetCoeffCmp(cosThethaD) * NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
      float bottom = 4 * cosThetaI * cosThetaO;
      return (top/bottom)*vertColor*lightIntensity;
 }
