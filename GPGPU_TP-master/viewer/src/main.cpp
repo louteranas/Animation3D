@@ -78,7 +78,7 @@ void setupWindowMenu(QMenuBar* myMenuBar, glShaderWindow* glWindow)
     foreach (const QString& sizeName, sizes) {
         QAction* action = setSizeAction->addAction(sizeName);
         action->setCheckable(true);
-        if (sizeName == "640x480") action->setChecked(true);
+        if (sizeName == "1024x768") action->setChecked(true);
         glWindow->connect(action, SIGNAL(triggered()), &sizeMapper, SLOT(map()));
         sizeMapper.setMapping(action, sizeName);
         sizeMenu->addAction(action);
@@ -125,7 +125,7 @@ int main( int argc, char* argv[] )
     QApplication app(argc, argv);
     QString sceneName = "lemming.ply";
     QString textureName = "wildtextures-seamless-wood-planks.jpg";
-    QString envMapName = "pisa.png";
+    QString envMapName = "grace-new.png";
 
     // Read scene name from arguments:
     QStringList arguments = app.arguments();
@@ -163,7 +163,7 @@ int main( int argc, char* argv[] )
     // Embedding a QWindow in a QWidget, only way to combine it with widgets
     QWidget * container = QWidget::createWindowContainer(window);
 
-    container->setMinimumSize(640, 480);
+    container->setMinimumSize(1024, 768);
     container->setFocusPolicy(Qt::TabFocus);
 
     // Menu bar to be shared between all windows.
