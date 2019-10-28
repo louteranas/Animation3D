@@ -55,7 +55,7 @@ float computeDelta(in vec3 cp, in float cpU){
     float radiusSquare = radius*radius;
     // (CP dot u)²
     float cpUSquare = cpU * cpU;
-    return 4*cpUSquare-4*(cpModuleSquare-radiusSquare);
+    return cpUSquare-(cpModuleSquare-radiusSquare);
 }
 
 /* find ray sphere intersection with start (eye), direction (u) and intersection (to be the result
@@ -72,7 +72,7 @@ bool raySphereIntersect(in vec3 start, in vec3 direction, out vec3 intersection)
         return false;
     }
     // compute lambda: (-b-sqrt(delta))/2a
-    float lambda = -cpU-sqrt(delta);
+    float lambda = (-cpU-sqrt(delta));
     // compute intersection = P+lambda*u
     intersection = start + lambda*direction;
     return true;
@@ -123,8 +123,6 @@ void main(void)
     bool intersect = raySphereIntersect(eye, u, intersection);
 
     vec4 resultColor;
-    float fresnelRefract[4];
-    float fresnelReflex[4];
     if(intersect){
         // Step 4: compute reflected and refracted rays
         vec3 reflectedRay;
