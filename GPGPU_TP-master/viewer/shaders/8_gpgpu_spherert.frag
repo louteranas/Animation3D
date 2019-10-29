@@ -16,10 +16,9 @@ in vec4 position;
 out vec4 fragColor;
 
 /* define others spheres */
-vec3 centers[2];
-float radiuss[2];
-centers[0]=center;
-radiuss[0]=radius;
+const vec3 centers[1] = vec3[1](center);
+const float radiuss[1] = vec3[1](radius);
+
 
 /* compute the color of the pixel of impact between the ray and the env Map*/
 vec4 getColorFromEnvironment(in vec3 direction)
