@@ -16,8 +16,8 @@ in vec4 position;
 out vec4 fragColor;
 
 /* define others spheres */
-const vec3 centers[1] = vec3[1](center);
-const float radiuss[1] = vec3[1](radius);
+vec3 centers[1] = vec3[1](vec3(center.x, center.y, center.z));
+float radiuss[1] = float[1](radius);
 
 
 /* compute the color of the pixel of impact between the ray and the env Map*/
@@ -161,7 +161,7 @@ vec4 computeResultColor(vec3 u, vec3 eye, int n){
                         //computing reflected and refracted ray
                         computeReflectedRefractedRays(i, intersection, u, 1., reflectedRay,refractedRay);
                         // computing the angle between the direction and normal in intersection point 
-                        cosThetha = getCosThetha(intersection, u, true);
+                        cosThetha = getCosThetha(i, intersection, u, true);
                         // we multiply with the last coeff from the last calculated ray
                         fresnelReflexion = lastCoeff * fresnelCoeff(cosThetha, eta, 1);
                         fresnelTrans = lastCoeff - fresnelReflexion;
