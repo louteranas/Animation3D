@@ -36,17 +36,14 @@ vec4 getColorFromEnvironment(in vec3 direction)
 }
 
 /* compute reflected and refracted rays of u */
-void computeReflectedRefractedRays(in vec3 intersection, in vec3 u, in bool inside, out vec3 reflectedRay, out vec3 refractedRay){
-    float etaN = eta;
-    if(inside ==true){
-        etaN = 1.;
-    }
+/* n2: outgoing milieu */
+void computeReflectedRefractedRays(in vec3 intersection, in vec3 u, in float n2, out vec3 reflectedRay, out vec3 refractedRay){
     // normal = intersection-center */
     vec3 normal = normalize(intersection - center);
     // reflected
     reflectedRay = reflect(u, normal);
     // refracted using eta
-    refractedRay = refract(u, normal, etaN);
+    refractedRay = refract(u, normal, n2);
 }
 
 /* Compute delta = 4(CP dot u)² - 4(CP - r²) */
@@ -84,20 +81,19 @@ bool raySphereIntersect(in vec3 start, in vec3 direction, out vec3 intersection)
 
 /**
 * this fuction calculate the Fresnet Coefficient
+* see https://en.wikipedia.org/wiki/Fresnel_equations
+* n1: incoming milieu
+* n2: outgoing milieu
 * For more details about the variable names, check the TP page
 **/
-float fresnelCoeff(float cosThethaD, bool inside){
-    float etaN = eta;
-    if(inside){
-        etaN = 1.;
-    }
+float fresnelCoeff(float cosThethaD, float n1, float n2){
      // Ci coeff 
-     float Ci = pow(etaN * etaN - (1 - cosThethaD*cosThethaD), 0.5);
+     float Ci = pow(1-(n1*n1/(n2*n2))*(1 - cosThethaD*cosThethaD), 0.5);
      // Fs coef
-     float fracFs = (cosThethaD - Ci) / (cosThethaD + Ci);
+     float fracFs = (n1*cosThethaD - n2*Ci) / (n1*cosThethaD + n2*Ci);
      float Fs = abs(fracFs) * abs(fracFs);
      // Fp coeff
-     float fracFp = (etaN * etaN * cosThethaD - Ci) / (etaN * etaN * cosThethaD + Ci);
+     float fracFp = (n1*Ci-n2*cosThethaD) / (n1*Ci+n2*cosThethaD);
      float Fp = abs(fracFp) * abs(fracFp);
      ///// Fresnel coeff
      float F = (Fs + Fp)/2;
@@ -107,10 +103,12 @@ float fresnelCoeff(float cosThethaD, bool inside){
      return F;
 }
 
-float getCosThetha(vec3 intersect, vec3 u){
+float getCosThetha(vec3 intersect, vec3 u, bool inside){
     vec3 normal = normalize(intersect - center);
+    if(inside){
+        normal = normalize(center - intersect);
+    }
     return dot(normal, normalize(u));
-
 }
 
 void main(void)
@@ -137,10 +135,10 @@ void main(void)
         vec3 refractedRay;
         vec4 result;
         int numberOfRebounds = 10;
-        computeReflectedRefractedRays(intersection, u, true, reflectedRay,refractedRay);
+        computeReflectedRefractedRays(intersection, u, eta, reflectedRay,refractedRay);
         
-        float cosThetha = getCosThetha(intersection, u);
-        float fresnelReflexion = fresnelCoeff(cosThetha, true);
+        float cosThetha = getCosThetha(intersection, u, false);
+        float fresnelReflexion = fresnelCoeff(cosThetha, 1., eta);
         float fresnelTrans = 1 - fresnelReflexion;
         float lastCoeff = fresnelTrans;
         // We have just calculated the first reflected ray, after this
@@ -162,12 +160,12 @@ void main(void)
                 // so we will always have an intersection
                 if(intersect){
                     //computing reflected and refracted ray
-                    computeReflectedRefractedRays(intersection, u, true, reflectedRay,refractedRay);
+                    computeReflectedRefractedRays(intersection, u, 1., reflectedRay,refractedRay);
                     // computing the angle between the direction and normal in intersection point 
-                    cosThetha = getCosThetha(intersection, -1 * u);
+                    cosThetha = getCosThetha(intersection, u, true);
                     // we multiply with the last coeff from the last calculated ray
-                    fresnelReflexion = lastCoeff * fresnelCoeff(cosThetha, true);
-                    fresnelTrans = lastCoeff * (1 - fresnelCoeff(cosThetha, true));
+                    fresnelReflexion = lastCoeff * fresnelCoeff(cosThetha, eta, 1);
+                    fresnelTrans = lastCoeff - fresnelReflexion;
                     // we update the last coeff which is the the reflexion one 
                     // because we follow the ray that stays inside the shpere
                     lastCoeff = fresnelReflexion;
