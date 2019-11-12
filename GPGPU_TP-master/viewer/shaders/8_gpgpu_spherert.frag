@@ -61,7 +61,7 @@ float computeDelta(in int index, in vec3 cp, in float cpU){
     float radiusSquare = radiuss[index]*radiuss[index];
     // (CP dot u)²
     float cpUSquare = cpU * cpU;
-    return cpUSquare-(cpModuleSquare-radiusSquare);
+    return 4.*cpUSquare-4.*(cpModuleSquare-radiusSquare);
 }
 
 /* find ray sphere intersection with start (eye), direction (u) and intersection (to be the result
@@ -78,7 +78,7 @@ bool raySphereIntersect(in int index, in vec3 start, in vec3 direction, out vec3
         return false;
     }
     // compute lambda: (-b-sqrt(delta))/2a
-    float lambda = (-cpU-sqrt(delta));
+    float lambda = (-2.*cpU-sqrt(delta))/2.;
     // compute intersection = P+lambda*u
     intersection = start + lambda*direction;
     return true;
@@ -93,15 +93,15 @@ bool raySphereIntersect(in int index, in vec3 start, in vec3 direction, out vec3
 **/
 float fresnelCoeff(float cosThethaD, float etaN){
      // Ci coeff 
-     float Ci = pow(max(0, (etaN*etaN - (1 - pow(cosThethaD, 2)))), 0.5);
+     float Ci = pow(max(0, (etaN*etaN - (1. - cosThethaD*cosThethaD))), 0.5);
      // Fs coef
      float fracFs = (cosThethaD - Ci) / (cosThethaD + Ci);
-     float Fs = pow(abs(fracFs), 2);
+     float Fs = abs(fracFs)*abs(fracFs);
      // Fp coeff
-     float fracFp = (etaN*etaN*cosThethaD - Ci) / (pow(eta,2)*cosThethaD + Ci);
-     float Fp = pow(abs(fracFp), 2);
+     float fracFp = (etaN*etaN*cosThethaD - Ci) / (etaN*etaN*cosThethaD + Ci);
+     float Fp = abs(fracFp)*abs(fracFp);
      ///// Fresnel coeff
-     float F = (Fs + Fp)/2;
+     float F = (Fs + Fp)/2.;
      if(F > 1.){
          return 1.0;
      }
@@ -128,7 +128,7 @@ float getCosThetha(in int index, vec3 intersect, vec3 u, bool inside){
     if(inside){
         normal = normalize(centers[index] - intersect);
     }
-    return dot(normal, normalize(u));
+    return dot(normal, normalize(-1.*u));
 }
 
 /* compute result color with n spheres */
@@ -149,9 +149,8 @@ vec4 computeResultColor(vec3 u, vec3 eye, int n){
             vec4 result;
             int numberOfRebounds = 5;
             computeReflectedRefractedRays(j, intersection, u, 1./eta, reflectedRay,refractedRay);
-            
             float cosThetha = getCosThetha(j, intersection, u, false);
-            float fresnelReflexion = fresnelCoeff(cosThetha, 1./eta);
+            float fresnelReflexion = fresnelCoeff(cosThetha, eta);
             float fresnelTrans = 1 - fresnelReflexion;
             float lastCoeff = fresnelTrans;
             // We have just calculated the first reflected ray, after this
@@ -161,13 +160,13 @@ vec4 computeResultColor(vec3 u, vec3 eye, int n){
             // now the incoming ray if the last refracted from the first raying 
             // coming from the eye
             u = normalize(refractedRay);
+            vec3 start = intersection;
             if(numberOfRebounds >0 && transparent){
                 for(int i = 0; i<numberOfRebounds; i++){
                     // the first intersection param is the last intersection and it represents our start point of the ray
                     // the second param is u, the direction of the ray with is the normalised last reflected/refracted ray 
                     //depending on the iteration
                     //the last param is again interection which give us the new intersection point
-                    vec3 start = intersection;
                     intersect = raySphereIntersect(j, start, u, intersection);
                     // we check if there is an intersection but in out case it's useless since we are in a sphere 
                     // so we will always have an intersection
@@ -177,13 +176,14 @@ vec4 computeResultColor(vec3 u, vec3 eye, int n){
                         // computing the angle between the direction and normal in intersection point 
                         cosThetha = getCosThetha(j, intersection, u, true);
                         // we multiply with the last coeff from the last calculated ray
-                        fresnelReflexion = lastCoeff * fresnelCoeff(cosThetha, eta);
+                        fresnelReflexion = lastCoeff * fresnelCoeff(cosThetha, 1./eta);
                         fresnelTrans = lastCoeff - fresnelReflexion;
                         // we update the last coeff which is the the reflexion one 
                         // because we follow the ray that stays inside the shpere
                         lastCoeff = fresnelReflexion;
                         // the new ray to trace is the one staying inside the sphere aka the reflected one
                         u = normalize(reflectedRay);
+                        start = intersection;
                         // and we add to the result the color of the pixel in which
                         // the ray that got out of the sphere aka the refracted one 
                         // intersects the envMap
@@ -211,6 +211,7 @@ void main(void)
     worldPos /= worldPos.w;
     worldPos.w = 0;
     worldPos = normalize(worldPos);
+
     // Step 2: ray direction:
     vec3 u = normalize((mat_inverse * worldPos).xyz);
     vec3 eye = (mat_inverse * vec4(0, 0, 0, 1)).xyz;
@@ -218,6 +219,5 @@ void main(void)
     // Step 3: compute frag color
     // n = number of spheres
     int n = 1;
-
     fragColor = computeResultColor(u, eye, n);
 }
