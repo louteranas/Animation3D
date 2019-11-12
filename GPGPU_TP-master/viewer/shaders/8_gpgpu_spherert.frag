@@ -30,10 +30,10 @@ vec4 getColorFromEnvironment(in vec3 direction)
     // in order to be able to use the function Texture 2D that return the frag color coresponding
     //point of the ray's impact with the env Map
     vec2 coord2D; // our interpolated coords between 0 and 1  
-    float thi; // the angle between the X axis and the direction vector's projection on the plane XY
+    float thi; // the angle between the X axis and the direction vector's pro111jection on the plane XY
     float theta; // the angle between the Z axis and the direction vector 
     // 
-    theta = M_PI + acos(dot(normalize(direction), vec3(0, 1, 0))); // we add Pi because the projection is upside down otherwise
+    theta = acos(dot(normalize(direction), vec3(0, -1, 0))); // we change the direction of the vector to not get a flipped reflection
     thi = atan(direction.x, direction.z); 
     coord2D.x = 0.5 + thi/(2*M_PI); // projection on the interval 0-1
     coord2D.y = theta/M_PI; // projection on the interval 0-1
@@ -141,13 +141,13 @@ vec4 computeResultColor(vec3 u, vec3 eye, int n){
         vec3 intersection;
         bool intersect = raySphereIntersect(j, eye, u, intersection);
 
-        if(intersect && eta != 1.){
+        if(intersect){
             rayIntersected = true;
             // Step 4: compute reflected and refracted rays
             vec3 reflectedRay;
             vec3 refractedRay;
             vec4 result;
-            int numberOfRebounds = 5;
+            int numberOfRebounds = 1;
             computeReflectedRefractedRays(j, intersection, u, 1./eta, reflectedRay,refractedRay);
             float cosThetha = getCosThetha(j, intersection, u, false);
             float fresnelReflexion = fresnelCoeff(cosThetha, eta);
@@ -156,7 +156,7 @@ vec4 computeResultColor(vec3 u, vec3 eye, int n){
             // We have just calculated the first reflected ray, after this
             // the ray that we need is the refracted one since we are inside the sphere,
             // so we need the ray that get out of the sphere.
-            result = fresnelReflexion * getColorFromEnvironment(reflectedRay);
+            result = fresnelReflexion * getColorFromEnvironment(normalize(reflectedRay));
             // now the incoming ray if the last refracted from the first raying 
             // coming from the eye
             u = normalize(refractedRay);
@@ -170,13 +170,13 @@ vec4 computeResultColor(vec3 u, vec3 eye, int n){
                     intersect = raySphereIntersect(j, start, u, intersection);
                     // we check if there is an intersection but in out case it's useless since we are in a sphere 
                     // so we will always have an intersection
-                    if(intersect){
+                    //if(intersect){
                         //computing reflected and refracted ray
-                        computeReflectedRefractedRays(j, intersection, u, eta, reflectedRay,refractedRay);
+                        computeReflectedRefractedRays(j, intersection, u, 1./eta, reflectedRay,refractedRay);
                         // computing the angle between the direction and normal in intersection point 
                         cosThetha = getCosThetha(j, intersection, u, true);
                         // we multiply with the last coeff from the last calculated ray
-                        fresnelReflexion = lastCoeff * fresnelCoeff(cosThetha, 1./eta);
+                        fresnelReflexion = lastCoeff * fresnelCoeff(cosThetha, eta);
                         fresnelTrans = lastCoeff - fresnelReflexion;
                         // we update the last coeff which is the the reflexion one 
                         // because we follow the ray that stays inside the shpere
@@ -187,8 +187,8 @@ vec4 computeResultColor(vec3 u, vec3 eye, int n){
                         // and we add to the result the color of the pixel in which
                         // the ray that got out of the sphere aka the refracted one 
                         // intersects the envMap
-                        result +=  fresnelTrans * getColorFromEnvironment(refractedRay);
-                    }    
+                        result = result + fresnelTrans * getColorFromEnvironment(refractedRay);
+                    //}    
                 }
             }
             resultColor = result;
