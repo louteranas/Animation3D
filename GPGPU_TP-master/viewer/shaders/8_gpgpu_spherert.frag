@@ -162,7 +162,7 @@ vec4 computeResultColor(vec3 u, vec3 eye, int n){
                     fresnelReflexion = lastCoeff * fresnelCoeff(cosThetha, eta);
                     fresnelTrans = lastCoeff - fresnelReflexion;
                     // we update the last coeff which is the the reflexion one because we follow the ray that stays inside the shpere
-                    lastCoeff = fresnelReflexion;
+                    lastCoeff = fresnelTrans;
                     // the new ray to trace is the one staying inside the sphere aka the reflected one
                     u = normalize(reflectedRay);
                     // and we add to the result the color of the pixel in which the ray that got out of the sphere aka the refracted one intersects the envMap
