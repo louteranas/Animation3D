@@ -125,6 +125,7 @@ float getCosThetha(in int index, vec3 intersection, vec3 u, bool inside){
 vec4 computeResultColor(vec3 u, vec3 eye, int n){
     vec4 resultColor;
     bool rayIntersected = false;
+    bool extremeCase = false;
 
     for(int j = 0; j<n; j++){
         // Step 3: ray intersection
@@ -137,26 +138,24 @@ vec4 computeResultColor(vec3 u, vec3 eye, int n){
             vec3 reflectedRay;
             vec3 refractedRay;
             vec4 result;
-            int numberOfRebounds = 1;
+            int numberOfRebounds = 10;
             computeReflectedRefractedRays(j, intersection, u, 1./eta, reflectedRay,refractedRay);
             float cosThetha = getCosThetha(j, intersection, u, false);
             float fresnelReflexion = fresnelCoeff(cosThetha, 1./eta);
             float fresnelTrans = 1 - fresnelReflexion;
             float lastCoeff = fresnelTrans;
             // We have just calculated the first reflected ray, after this the ray that we need is the refracted one since we are inside the sphere,so we need the ray that get out of the sphere.
-            if(numberOfRebounds  != 0 || transparent){
+            if(numberOfRebounds  != 0 && transparent && !(isnan(refractedRay.x)||isnan(refractedRay.y)||isnan(refractedRay.z))){
                 result.rgb = fresnelReflexion * getColorFromEnvironment(normalize(reflectedRay)).rgb;
             }
             else{
                 result.rgb = getColorFromEnvironment(normalize(reflectedRay)).rgb;
+                extremeCase =true;
                 
-            }
-            if(isnan(refractedRay.x)||isnan(refractedRay.y)||isnan(refractedRay.z)){
-                return vec4(1, 0, 0, 1); //getColorFromEnvironment(normalize(reflectedRay));
             }
             // now the incoming ray if the last refracted from the first raying coming from the eye
             u = normalize(refractedRay);
-            if(numberOfRebounds >0 && transparent){
+            if(numberOfRebounds >0 && transparent && !extremeCase){
                 for(int i = 0; i<numberOfRebounds; i++){
                     // the first intersection param is the last intersection and it represents our start point of the ray the second param is u, the direction of the ray with is the normalised last reflected/refracted ray 
                     //depending on the iteration the last param is again interection which give us the new intersection point
@@ -173,13 +172,9 @@ vec4 computeResultColor(vec3 u, vec3 eye, int n){
                     // the new ray to trace is the one staying inside the sphere aka the reflected one
                     u = normalize(reflectedRay);
                     // and we add to the result the color of the pixel in which the ray that got out of the sphere aka the refracted one intersects the envMap
-                    if(isnan(refractedRay.x)||isnan(refractedRay.y)||isnan(refractedRay.z)){
-                        return result;
-                    }
-                    else{
+                    if(!(isnan(refractedRay.x)||isnan(refractedRay.y)||isnan(refractedRay.z))){
                         result.rgb = result.rgb + fresnelReflexion * getColorFromEnvironment(refractedRay).rgb;
                     }
-                       
                 }
             }
             resultColor.rgb = result.rgb;
