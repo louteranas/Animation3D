@@ -9,12 +9,6 @@ in vec2 texcoords;
 out vec2 textCoords;
 out vec4 position;
 
-uniform mat4 matrix;
-uniform mat4 perspective;
-uniform mat3 normalMatrix;
-uniform bool noColor;
-uniform vec3 lightPosition;
-
 // Camera-space coordinates
 out vec4 eyeVector;
 out vec4 lightVector;
@@ -30,6 +24,7 @@ void main( void )
     vertNormal = normal;
     textCoords = texcoords;
 
+    // position
     position = vertex;
     gl_Position = vertex;
 }
