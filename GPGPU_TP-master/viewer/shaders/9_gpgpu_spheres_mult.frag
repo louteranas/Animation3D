@@ -1,7 +1,13 @@
 #version 410
 #define M_PI 3.14159265358979323846
 
+// uniform color models
+uniform float lightIntensity;
+uniform bool blinnPhong;
+uniform float shininess;
+uniform bool noColor;
 
+// env map
 uniform mat4 mat_inverse;
 uniform mat4 persp_inverse;
 uniform sampler2D envMap;
@@ -16,6 +22,7 @@ uniform float shininess;
 uniform float eta;
 
 in vec4 position;
+in vec4 color;
 
 out vec4 fragColor;
 
@@ -31,15 +38,52 @@ float radiuss[numberOfSpheres] = float[](
 );
 
 /* compute ambient lighting when the intersection is in the shadow of a light */
-vec4 computeAmbientLighting(){
-    // TODO
+vec4 computeAmbientLighting(in vec4 vertColor){
+    // // ambient reflection param 
+    //  float Ka = 0.7;
+    //  // setting the ambiantLighting - Ca
+    //  vec4 ambientLight = Ka * vertColor * lightIntensity;
+    // return ambientLight;
     return vec4(0,1,0,1);
 }
 
-/* compute color source lighting */
-vec4 computeColorFromLightSource(in vec3 start, in vec3 normal){
+/* compute diffuse lighting */
+vec4 computeDiffuseLighting(in vec4 vertColor, in vec4 vertNormal, in vec4 lightVector){
+    vec4 diffuseLighting = vec4(0.5,0.0,0.0,1.0)
+    // // Diffuse reflection param 
+    // float Kd = 0.7;
+    // // setting the Diffuse lighting - Cd
+    // diffuseLighting = Kd * vertColor * lightIntensity * max(0, dot(vertNormal, lightVector));
+    return diffuseLighting;
+}
+
+/* compute specular lighting */
+vec4 computeSpecularLighting(){
+    vec4 specularLighting = vec4(0.5,0.0,0.0,1.0);
     // TODO
-    return vec4(1,0,0,1);
+    return specularLighting; 
+}
+
+/* compute color source lighting */
+vec3 computeColorFromLightSource(in bool intersect, in vec3 start, in vec3 normal){
+    // parameters
+    vec4 vertColor;
+    vec4 vertNormal = vec4(normal.xyz,1.);
+    vec4 lightVector = vec4(normalize(lightPosition-start),1.);
+    if (noColor) vertColor = vec4(0.2, 0.6, 0.7, 1.0 );
+    else vertColor = color;
+
+    // ambient lighting
+    vec4 ambientLighting = computeAmbientLighting(vertColor);
+
+    if(intersect){
+        return ambiantLighting.rgb;
+    } else {
+        // diffuse lighting
+        vec4 diffuseLighting = computeDiffuseLighting(vertColor, vertNormal, lightVector)
+        vec4 specularLighting = computeSpecularLighting();
+        return ambientLighting.rgb + diffuseLighting.rgb + specularLighting.rgb;
+    }
 }
 
 /* Compute delta = 4(CP dot u)² - 4(CP - r²) */
@@ -72,11 +116,11 @@ bool raySphereIntersectOne(in vec3 start, in vec3 direction, in int indexSphere,
 }
 
 /* compute the color of the pixel of impact between the ray and the color source*/
-vec4 getColorFromLightSource(in vec3 start, in vec3 normal, in int indexSphere)
+vec3 getColorFromLightSource(in vec3 start, in vec3 normal, in int indexSphere)
 {
     // 1) VERIFY IF INTERSECT A SPHERE
     bool intersect = false;
-    vec3 direction = normalize(start - lightPosition);
+    vec3 direction = normalize(lightPosition - start);
     float lambda = 0;
     for(int i = 0; i< numberOfSpheres; i++){
         if(indexSphere != i){
@@ -85,13 +129,7 @@ vec4 getColorFromLightSource(in vec3 start, in vec3 normal, in int indexSphere)
     }
     
     // 2) COLOR
-    if(intersect){
-        // ambient lighting
-        return computeAmbientLighting();
-    } else {
-        // color source
-        return computeColorFromLightSource(start,normal);
-    }
+    return computeColorFromLightSource(intersect, start,normal).rgb;
 }
 
 /* find ray sphere intersection with start (eye), direction (u) and intersection (to be the result
@@ -158,11 +196,11 @@ vec4 computeResultColor(vec3 u, vec3 eye){
         vec3(0.0,0.0,0.0),
         vec3(0.0,0.0,0.0)
     );
-    vec4 stackOfColors[4] = vec4[](
-        vec4(0.0,0.0,0.0,0.0),
-        vec4(0.0,0.0,0.0,0.0),
-        vec4(0.0,0.0,0.0,0.0),
-        vec4(0.0,0.0,0.0,0.0)
+    vec3 stackOfColors[4] = vec3[](
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0)
     );
     vec3 stackOfIncoming[4] = vec3[](
         vec3(0.0,0.0,0.0),
