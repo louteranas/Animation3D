@@ -7,6 +7,11 @@ uniform bool blinnPhong;
 uniform float shininess;
 uniform bool noColor;
 
+// matrix perspective
+uniform mat4 matrix;
+uniform mat4 perspective;
+uniform mat3 normalMatrix;
+
 // env map
 uniform mat4 mat_inverse;
 uniform mat4 persp_inverse;
@@ -18,71 +23,78 @@ uniform float radius;
 uniform vec3 lightPosition;
 
 uniform bool transparent;
-uniform float shininess;
 uniform float eta;
 
 in vec4 position;
-in vec4 color;
+in vec4 vertColor;
 
 out vec4 fragColor;
 
 /* define others spheres */
-const int numberOfSpheres = 2;
+const int numberOfSpheres = 5;
 vec3 centers[numberOfSpheres] = vec3[](
     vec3(center.x, center.y, center.z),
-    vec3(center.x+2*radius, center.y+2*radius, center.z+2*radius)
+    vec3(center.x+2*radius, center.y+2*radius, center.z+2*radius),
+    vec3(center.x-2*radius, center.y-2*radius, center.z-2*radius),
+    vec3(center.x-2*radius, center.y+2*radius, center.z+2*radius),
+    vec3(center.x-2*radius, center.y+2*radius, center.z-2*radius)
 );
 float radiuss[numberOfSpheres] = float[](
+    radius,
+    radius,
+    radius,
     radius,
     radius
 );
 
+/* compute color from plane */
+vec4 getColorFromPlane(in vec3 intersection){
+    // TODO
+    return vec4(0.5,0,0,1);
+}
+
 /* compute ambient lighting when the intersection is in the shadow of a light */
 vec4 computeAmbientLighting(in vec4 vertColor){
-    // // ambient reflection param 
-    //  float Ka = 0.7;
-    //  // setting the ambiantLighting - Ca
-    //  vec4 ambientLight = Ka * vertColor * lightIntensity;
-    // return ambientLight;
-    return vec4(0,1,0,1);
+    // ambient reflection param 
+     float Ka = 0.7;
+     // setting the ambiantLighting - Ca
+     vec4 ambientLight = Ka * lightIntensity * vertColor;
+    return ambientLight;
 }
 
 /* compute diffuse lighting */
 vec4 computeDiffuseLighting(in vec4 vertColor, in vec4 vertNormal, in vec4 lightVector){
-    vec4 diffuseLighting = vec4(0.5,0.0,0.0,1.0)
-    // // Diffuse reflection param 
-    // float Kd = 0.7;
-    // // setting the Diffuse lighting - Cd
-    // diffuseLighting = Kd * vertColor * lightIntensity * max(0, dot(vertNormal, lightVector));
+    vec4 diffuseLighting;
+    // Diffuse reflection param 
+    float Kd = 0.7;
+    // setting the Diffuse lighting - Cd
+    diffuseLighting = Kd * vertColor * lightIntensity * max(0, dot(vertNormal, lightVector));
     return diffuseLighting;
 }
 
 /* compute specular lighting */
 vec4 computeSpecularLighting(){
-    vec4 specularLighting = vec4(0.5,0.0,0.0,1.0);
+    vec4 specularLighting = vec4(0.1,0.0,0.0,1.0);
     // TODO
     return specularLighting; 
 }
 
 /* compute color source lighting */
-vec3 computeColorFromLightSource(in bool intersect, in vec3 start, in vec3 normal){
+vec4 computeColorFromLightSource(in bool intersect, in vec3 start, in vec3 normal){
     // parameters
-    vec4 vertColor;
     vec4 vertNormal = vec4(normal.xyz,1.);
-    vec4 lightVector = vec4(normalize(lightPosition-start),1.);
-    if (noColor) vertColor = vec4(0.2, 0.6, 0.7, 1.0 );
-    else vertColor = color;
+    vec4 lightVector = normalize(vec4(start,1)-vec4(lightPosition,1));
 
     // ambient lighting
     vec4 ambientLighting = computeAmbientLighting(vertColor);
 
     if(intersect){
-        return ambiantLighting.rgb;
+        return ambientLighting;
     } else {
         // diffuse lighting
-        vec4 diffuseLighting = computeDiffuseLighting(vertColor, vertNormal, lightVector)
+        vec4 diffuseLighting = computeDiffuseLighting(vertColor, vertNormal, lightVector);
         vec4 specularLighting = computeSpecularLighting();
-        return ambientLighting.rgb + diffuseLighting.rgb + specularLighting.rgb;
+        return ambientLighting + diffuseLighting ;//+ specularLighting.rgb;
     }
 }
 
@@ -115,12 +127,27 @@ bool raySphereIntersectOne(in vec3 start, in vec3 direction, in int indexSphere,
     }
 }
 
+/* compute if u intersect with the plane defined by point Q and normal n */
+bool rayPlaneIntersect(in vec3 start, in vec3 u, out vec3 intersection){
+    vec3 Q = vec3(0,-100,0);
+    vec3 n = vec3(0,1,0);
+    vec3 PQ = Q-start;
+    float lambda = -1*(dot(PQ,n)/dot(u,n));
+    if(lambda > 0){
+        intersection = start+lambda*u;
+        return true;
+    } else {
+        return false;
+    }
+}
+
 /* compute the color of the pixel of impact between the ray and the color source*/
-vec3 getColorFromLightSource(in vec3 start, in vec3 normal, in int indexSphere)
+vec4 getColorFromLightSource(in vec3 start, in vec3 normal, in int indexSphere)
 {
     // 1) VERIFY IF INTERSECT A SPHERE
     bool intersect = false;
-    vec3 direction = normalize(lightPosition - start);
+    vec4 lightPosCS = vec4(lightPosition,1);
+    vec3 direction = normalize(lightPosition.xyz-start);
     float lambda = 0;
     for(int i = 0; i< numberOfSpheres; i++){
         if(indexSphere != i){
@@ -129,7 +156,7 @@ vec3 getColorFromLightSource(in vec3 start, in vec3 normal, in int indexSphere)
     }
     
     // 2) COLOR
-    return computeColorFromLightSource(intersect, start,normal).rgb;
+    return computeColorFromLightSource(intersect, start,normal);
 }
 
 /* find ray sphere intersection with start (eye), direction (u) and intersection (to be the result
@@ -196,11 +223,11 @@ vec4 computeResultColor(vec3 u, vec3 eye){
         vec3(0.0,0.0,0.0),
         vec3(0.0,0.0,0.0)
     );
-    vec3 stackOfColors[4] = vec3[](
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0)
+    vec4 stackOfColors[4] = vec4[](
+        vec4(0.0,0.0,0.0,1.0),
+        vec4(0.0,0.0,0.0,1.0),
+        vec4(0.0,0.0,0.0,1.0),
+        vec4(0.0,0.0,0.0,1.0)
     );
     vec3 stackOfIncoming[4] = vec3[](
         vec3(0.0,0.0,0.0),
@@ -218,7 +245,7 @@ vec4 computeResultColor(vec3 u, vec3 eye){
         stackOfIntersections[counter].xyz = intersection.xyz;
         stackOfNormals[counter].xyz = normal.xyz;
         stackOfIncoming[counter].xyz = u.xyz;
-        stackOfColors[counter].rgb = getColorFromLightSource(intersection, normal, indexSphere).rgb;
+        stackOfColors[counter] = getColorFromLightSource(intersection, normal, indexSphere);
         counter += 1;
 
         // new reflected ray
@@ -229,13 +256,17 @@ vec4 computeResultColor(vec3 u, vec3 eye){
 
     // NO INTERSECTION
     if(counter == 0){
-        resultColor.rgb = vec4(0,0,0,1).rgb;
+        if(rayPlaneIntersect(eye,u,intersection)){
+            resultColor = getColorFromPlane(intersection);
+        } else {
+            resultColor = vec4(0.0,0.0,0.0,1.0);
+        }
         return resultColor;
     } else {
         // NO MORE INTERSECTION: FOLLOW THE RAY STARTING FROM THE LAST INTERSECTION
         counter -= 1;
         while(counter >= 0){
-            resultColor.rgb +=  stackOfColors[counter].rgb;
+            resultColor +=  stackOfColors[counter];
             counter -= 1;
         }
     }

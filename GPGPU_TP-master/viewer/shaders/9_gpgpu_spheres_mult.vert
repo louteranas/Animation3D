@@ -1,5 +1,7 @@
 #version 410
 
+uniform bool noColor;
+
 // Standard parameters of a VAO
 in vec4 vertex;
 in vec4 normal;
@@ -20,7 +22,9 @@ out vec4 vertNormal;
 void main( void )
 {
     // You need to use color/normal/textcoords. Bad things can happen otherwise
-    vertColor = color;
+    if (noColor) vertColor = vec4(0.2, 0.6, 0.7, 1.0 );
+    else vertColor = color;
+
     vertNormal = normal;
     textCoords = texcoords;
 
