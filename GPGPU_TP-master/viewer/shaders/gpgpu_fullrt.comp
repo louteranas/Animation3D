@@ -46,6 +46,7 @@ layout (std430, binding = 4) buffer Meshes
 
 bool intersectBoundingBox(vec4 origin, vec4 dir) {
 	// TODO
+    float lambda = (bbmin.y - origin.y)/dir.y;
     return false;
 }
 
@@ -88,7 +89,13 @@ const int MAX_TRACE = 1;
 vec4 trace(vec4 origin, vec4 dir)
 {
 	// TODO: trace a ray in the scene, see what it intersects, bounce around
-    return vec4(1);
+
+    //1) Check if the ray intersects the object bounding box
+    if(intersectBoundingBox(origin, dir)){
+        return vec4(1,0,0,1);
+    } else {
+        return normalize(vec4(128,128,128,1));
+    }
 }
 
 layout (local_size_x = 8, local_size_y = 8) in;
