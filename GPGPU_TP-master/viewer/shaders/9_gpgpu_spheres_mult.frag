@@ -31,26 +31,42 @@ in vec4 vertColor;
 out vec4 fragColor;
 
 /* define others spheres */
-const int numberOfSpheres = 5;
+const int numberOfSpheres = 2;
 vec3 centers[numberOfSpheres] = vec3[](
     vec3(center.x, center.y, center.z),
-    vec3(center.x+2*radius, center.y+2*radius, center.z+2*radius),
+    vec3(center.x+2*radius, center.y+2*radius, center.z+2*radius)/*,
     vec3(center.x-2*radius, center.y-2*radius, center.z-2*radius),
     vec3(center.x-2*radius, center.y+2*radius, center.z+2*radius),
-    vec3(center.x-2*radius, center.y+2*radius, center.z-2*radius)
+    vec3(center.x-2*radius, center.y+2*radius, center.z-2*radius)*/
 );
 float radiuss[numberOfSpheres] = float[](
     radius,
+    radius/*,
     radius,
     radius,
-    radius,
-    radius
+    radius*/
 );
 
 /* compute color from plane */
-vec4 getColorFromPlane(in vec3 intersection){
-    // TODO
-    return vec4(0.5,0,0,1);
+vec4 getColorFromPlane(in vec3 direction){
+    // the env map is like an infinite sphere arround the world
+    // so the first thing to do is to transform the direction coords into 
+    //sheprique coords, then we know that thi is in -pi, pi 
+    //and Theta between 0 ans 2*Pi, so we transform this to get a value between 0 and 1 
+    // in order to be able to use the function Texture 2D that return the frag color coresponding
+    //point of the ray's impact with the env Map
+    vec2 coord2D; // our interpolated coords between 0 and 1  
+    float thi; // the angle between the X axis and the direction vector's pro111jection on the plane XY
+    float theta; // the angle between the Z axis and the direction vector 
+    // 
+    float scalar = dot(normalize(direction), vec3(0, -1, 0));
+    theta = acos(scalar); // we change the direction of the vector to not get a flipped reflection
+    thi = atan(direction.x, direction.z); 
+    coord2D.x = 0.5 + thi/(2*M_PI); // projection on the interval 0-1
+    coord2D.y = theta/M_PI; // projection on the interval 0-1
+
+    return texture2D(envMap,coord2D);
+    // return vec4(0.5,0,0,1);
 }
 
 /* compute ambient lighting when the intersection is in the shadow of a light */
@@ -127,20 +143,6 @@ bool raySphereIntersectOne(in vec3 start, in vec3 direction, in int indexSphere,
     }
 }
 
-/* compute if u intersect with the plane defined by point Q and normal n */
-bool rayPlaneIntersect(in vec3 start, in vec3 u, out vec3 intersection){
-    vec3 Q = vec3(0,-100,0);
-    vec3 n = vec3(0,1,0);
-    vec3 PQ = Q-start;
-    float lambda = -1*(dot(PQ,n)/dot(u,n));
-    if(lambda > 0){
-        intersection = start+lambda*u;
-        return true;
-    } else {
-        return false;
-    }
-}
-
 /* compute the color of the pixel of impact between the ray and the color source*/
 vec4 getColorFromLightSource(in vec3 start, in vec3 normal, in int indexSphere)
 {
@@ -198,6 +200,23 @@ bool raySphereIntersect(in vec3 start, in vec3 direction, out int indexSphere, o
     }
 }
 
+/* compute if u intersect with the plane defined by point Q and normal n */
+bool rayPlaneIntersect(in vec3 start, in vec3 u, out vec3 intersection){
+    // define the plane
+    vec3 Q = vec3(0,-100,0);
+    vec3 n = vec3(0,1,0);
+
+    // compute intersection
+    vec3 PQ = Q-start;
+    float lambda = -1*(dot(PQ,n)/dot(u,n));
+    if(lambda > 0){
+        intersection = start+lambda*u;
+        return true;
+    } else {
+        return false;
+    }
+}
+
 /* compute result color with n spheres */
 vec4 computeResultColor(vec3 u, vec3 eye){
     vec4 resultColor;
@@ -239,8 +258,8 @@ vec4 computeResultColor(vec3 u, vec3 eye){
 
     // 2) FOLLOW THE RAY 
     // until it reaches the limit or it leaves the scene
-    bool intersect = raySphereIntersect(eye, u, indexSphere,intersection,normal);
-    while(counter < limit && intersect){
+    bool intersectSphere = raySphereIntersect(eye, u, indexSphere,intersection,normal);
+    while(counter < limit && intersectSphere){
         // update information about the intersection, normal, color and incoming direction
         stackOfIntersections[counter].xyz = intersection.xyz;
         stackOfNormals[counter].xyz = normal.xyz;
@@ -251,13 +270,13 @@ vec4 computeResultColor(vec3 u, vec3 eye){
         // new reflected ray
         reflectedRay = reflect(u, normal);
         u = normalize(reflectedRay);
-        intersect = raySphereIntersect(intersection,u,indexSphere,intersection,normal);
+        intersectSphere = raySphereIntersect(intersection,u,indexSphere,intersection,normal);
     }
 
     // NO INTERSECTION
     if(counter == 0){
         if(rayPlaneIntersect(eye,u,intersection)){
-            resultColor = getColorFromPlane(intersection);
+            resultColor = getColorFromPlane(u);
         } else {
             resultColor = vec4(0.0,0.0,0.0,1.0);
         }
