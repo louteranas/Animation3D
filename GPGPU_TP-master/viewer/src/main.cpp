@@ -126,7 +126,7 @@ int main( int argc, char* argv[] )
     QString sceneName = "lemming.ply";
     QString textureName = "wildtextures-seamless-wood-planks.jpg";
     // QString envMapName = "grace-new.png";
-    QString envMapName = "pisa.png";
+    QString envMapName = "wood.jpg";
 
     // Read scene name from arguments:
     QStringList arguments = app.arguments();

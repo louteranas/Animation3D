@@ -22,8 +22,8 @@ out vec4 vertNormal;
 void main( void )
 {
     // You need to use color/normal/textcoords. Bad things can happen otherwise
-    if (noColor) vertColor = vec4(0.2, 0.6, 0.7, 1.0 );
-    else vertColor = color;
+    if (noColor) vertColor = vec4(1, 1, 1, 1.0 );
+    else vertColor = vec4(1, 1, 1, 1.0 );
 
     vertNormal = normal;
     textCoords = texcoords;

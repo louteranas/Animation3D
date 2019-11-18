@@ -31,20 +31,20 @@ in vec4 vertColor;
 out vec4 fragColor;
 
 /* define others spheres */
-const int numberOfSpheres = 2;
+const int numberOfSpheres = 5;
 vec3 centers[numberOfSpheres] = vec3[](
     vec3(center.x, center.y, center.z),
-    vec3(center.x+2*radius, center.y+2*radius, center.z+2*radius)/*,
+    vec3(center.x+2*radius, center.y+2*radius, center.z+2*radius),
     vec3(center.x-2*radius, center.y-2*radius, center.z-2*radius),
     vec3(center.x-2*radius, center.y+2*radius, center.z+2*radius),
-    vec3(center.x-2*radius, center.y+2*radius, center.z-2*radius)*/
+    vec3(center.x-2*radius, center.y+2*radius, center.z-2*radius)
 );
 float radiuss[numberOfSpheres] = float[](
     radius,
-    radius/*,
     radius,
     radius,
-    radius*/
+    radius,
+    radius
 );
 
 /* compute color from plane */
@@ -66,7 +66,6 @@ vec4 getColorFromPlane(in vec3 direction){
     coord2D.y = theta/M_PI; // projection on the interval 0-1
 
     return texture2D(envMap,coord2D);
-    // return vec4(0.5,0,0,1);
 }
 
 /* compute ambient lighting when the intersection is in the shadow of a light */
@@ -91,7 +90,21 @@ vec4 computeDiffuseLighting(in vec4 vertColor, in vec4 vertNormal, in vec4 light
 /* compute specular lighting */
 vec4 computeSpecularLighting(){
     vec4 specularLighting = vec4(0.1,0.0,0.0,1.0);
-    // TODO
+    
+    // // half Vector
+    // vec4 halfVector = normalize(lightVector + eyeVector);
+    // // ThetaD, angle between halfVector & lightVector we only need its cos value
+    // float cosThethaD = dot(halfVector, lightVector); // /(length(halfVector)*length(lightVector)) ? what is the correct formula? OK because normalize :);
+    // // setting the specular lighting - Cs
+    // vec4 specularLighting;
+    // // float temp = specularLightingCT(cosThethaD, halfVector);
+    // if(blinnPhong)
+    //     // using the blinn phong model
+    //     specularLighting = specularLightingBP(cosThethaD, halfVector);
+    // else {
+    //     // using the cook torrance model
+    //     specularLighting = specularLightingCT(cosThethaD, halfVector, alpha);
+    // }
     return specularLighting; 
 }
 
@@ -112,6 +125,36 @@ vec4 computeColorFromLightSource(in bool intersect, in vec3 start, in vec3 norma
         vec4 specularLighting = computeSpecularLighting();
         return ambientLighting + diffuseLighting ;//+ specularLighting.rgb;
     }
+}
+
+/**
+* this fuction calculate the Fresnet Coefficient
+* see https://en.wikipedia.org/wiki/Fresnel_equations
+* n1: incoming milieu
+* n2: outgoing milieu
+* For more details about the variable names, check the TP page
+**/
+float fresnelCoeff(float cosThethaD, float etaN){
+     // Ci coeff 
+     float Ci = sqrt(1.- etaN*etaN*(1. - cosThethaD*cosThethaD));
+     // Fs coef
+     float fracFs = abs(etaN*cosThethaD - Ci) / abs(etaN*cosThethaD + Ci);
+     float Fs = fracFs*fracFs;
+     // Fp coeff
+     float fracFp = abs(etaN*etaN*Ci - cosThethaD) / abs(etaN*etaN*Ci + cosThethaD);
+     float Fp = fracFp*fracFp;
+     ///// Fresnel coeff
+     float F = (Fs + Fp)/2.;
+     if(F > 1.){
+         return 1.;
+     }
+     return F;
+
+}
+
+/* compute cos theta d with u and n */
+float getCosThetha(vec3 normal, vec3 u){
+    return dot(normal, normalize(-1.*u));
 }
 
 /* Compute delta = 4(CP dot u)² - 4(CP - r²) */
@@ -227,33 +270,59 @@ vec4 computeResultColor(vec3 u, vec3 eye){
     int indexSphere;
 
     // limit for number of bounds
-    int limit = 4;
+    const int limit = 10;
 
     // 1) INIT STACKS
-    vec3 stackOfIntersections[4] = vec3[](
+    vec3 stackOfIntersections[limit] = vec3[](
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
         vec3(0.0,0.0,0.0),
         vec3(0.0,0.0,0.0),
         vec3(0.0,0.0,0.0),
         vec3(0.0,0.0,0.0)
     );
-    vec3 stackOfNormals[4] = vec3[](
+    vec3 stackOfNormals[limit] = vec3[](
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
         vec3(0.0,0.0,0.0),
         vec3(0.0,0.0,0.0),
         vec3(0.0,0.0,0.0),
         vec3(0.0,0.0,0.0)
     );
-    vec4 stackOfColors[4] = vec4[](
+    vec4 stackOfColors[limit] = vec4[](
+        vec4(0.0,0.0,0.0,1.0),
+        vec4(0.0,0.0,0.0,1.0),
+        vec4(0.0,0.0,0.0,1.0),
+        vec4(0.0,0.0,0.0,1.0),
+        vec4(0.0,0.0,0.0,1.0),
+        vec4(0.0,0.0,0.0,1.0),
         vec4(0.0,0.0,0.0,1.0),
         vec4(0.0,0.0,0.0,1.0),
         vec4(0.0,0.0,0.0,1.0),
         vec4(0.0,0.0,0.0,1.0)
     );
-    vec3 stackOfIncoming[4] = vec3[](
+    vec3 stackOfIncoming[limit] = vec3[](
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
+        vec3(0.0,0.0,0.0),
         vec3(0.0,0.0,0.0),
         vec3(0.0,0.0,0.0),
         vec3(0.0,0.0,0.0),
         vec3(0.0,0.0,0.0)
     );
+    float stackOfFresnel[limit] = float[](0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0);
+
     int counter = 0;
 
     // 2) FOLLOW THE RAY 
@@ -265,6 +334,9 @@ vec4 computeResultColor(vec3 u, vec3 eye){
         stackOfNormals[counter].xyz = normal.xyz;
         stackOfIncoming[counter].xyz = u.xyz;
         stackOfColors[counter] = getColorFromLightSource(intersection, normal, indexSphere);
+        float cosThethaD = getCosThetha(normal, u);
+        float F = fresnelCoeff(cosThethaD, 1./eta);
+        stackOfFresnel[counter] = 1.-F;
         counter += 1;
 
         // new reflected ray
@@ -273,22 +345,39 @@ vec4 computeResultColor(vec3 u, vec3 eye){
         intersectSphere = raySphereIntersect(intersection,u,indexSphere,intersection,normal);
     }
 
-    // NO INTERSECTION
-    if(counter == 0){
+    resultColor = vec4(0.,0.,0.,1.);
+
+    if(counter != 0){
+        counter-=1;
+        if(rayPlaneIntersect(stackOfIntersections[counter],stackOfIncoming[counter],intersection)){
+            resultColor = getColorFromPlane(u);
+        }
+        for(int j = counter; j>=0; j--){
+            resultColor = stackOfFresnel[j]*resultColor + stackOfColors[j];
+        }
+    } else {
         if(rayPlaneIntersect(eye,u,intersection)){
             resultColor = getColorFromPlane(u);
-        } else {
-            resultColor = vec4(0.0,0.0,0.0,1.0);
-        }
-        return resultColor;
-    } else {
-        // NO MORE INTERSECTION: FOLLOW THE RAY STARTING FROM THE LAST INTERSECTION
-        counter -= 1;
-        while(counter >= 0){
-            resultColor +=  stackOfColors[counter];
-            counter -= 1;
         }
     }
+    
+
+    // // NO INTERSECTION
+    // if(counter == 0){
+    //     if(rayPlaneIntersect(eye,u,intersection)){
+    //         resultColor = getColorFromPlane(u);
+    //     } else {
+    //         resultColor = vec4(0.0,0.0,0.0,1.0);
+    //     }
+    //     return resultColor;
+    // } else {
+    //     // NO MORE INTERSECTION: FOLLOW THE RAY STARTING FROM THE LAST INTERSECTION
+    //     counter -= 1;
+    //     while(counter >= 0){
+    //         resultColor +=  stackOfColors[counter];
+    //         counter -= 1;
+    //     }
+    // }
     return resultColor;
 }
 
