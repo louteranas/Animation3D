@@ -70,8 +70,11 @@ bool raySphereIntersect(in vec3 start, in vec3 direction,in bool inside, out vec
 }
 
 /* compute cos theta d with u and n */
-float getCosThetha(vec3 intersection, vec3 u){
+float getCosThetha(vec3 intersection, vec3 u, bool inside){
     vec3 normal = normalize(intersection - center);
+    if(inside){
+        normal = normalize(center - intersection);
+    }
     return abs(dot(normal, normalize(u)));
 }
 
@@ -89,9 +92,12 @@ float fresnelCoeff(float cosThethaD, float etaN){
      return F;
 }
 
-void computeReflectedRefractedRays(in vec3 intersection, in vec3 u, in float etaN, out vec3 reflectedRay, out vec3 refractedRay){
+void computeReflectedRefractedRays(in vec3 intersection, in vec3 u, in float etaN, in bool inside, out vec3 reflectedRay, out vec3 refractedRay){
     // normal = intersection-center */
     vec3 normal = normalize(intersection - center);
+    if(inside){
+        normal = normalize(center - intersection);
+    }
     // reflected
     reflectedRay = reflect(u, normal);
     // refracted using eta
@@ -114,13 +120,13 @@ vec4 computeResultColor(vec3 u, vec3 eye, int n){
         vec4 result;
         // Step 4: compute reflected and refracted rays
         int numberOfRebounds = 1;
-        computeReflectedRefractedRays(intersection, u, 1./eta, reflectedRay,refractedRay);
-        float cosThetha = getCosThetha(intersection, u);
+        computeReflectedRefractedRays(intersection, u, 1./eta, false, reflectedRay,refractedRay);
+        float cosThetha = getCosThetha(intersection, u, false);
         float fresnelReflexion = fresnelCoeff(cosThetha, eta);
         float fresnelTrans = 1 - fresnelReflexion;
         float lastCoeff = fresnelTrans;
         if(numberOfRebounds != 0 && transparent && !(fresnelReflexion>1.)){
-            result.rgb = fresnelReflexion * getColorFromEnvironment(normalize(reflectedRay)).rgb;
+            result = fresnelReflexion * getColorFromEnvironment(normalize(reflectedRay));
         }
         else{
             return getColorFromEnvironment(normalize(reflectedRay));
@@ -129,19 +135,19 @@ vec4 computeResultColor(vec3 u, vec3 eye, int n){
         u = normalize(refractedRay);
         if(numberOfRebounds >0 && transparent){
             for(int i = 0; i<numberOfRebounds; i++){
-                hasIntersect = raySphereIntersect(intersection, u, false, intersection);
-                computeReflectedRefractedRays(intersection, u, 1./eta, reflectedRay,refractedRay);
-                cosThetha = getCosThetha(intersection, u);
-                fresnelReflexion = lastCoeff * fresnelCoeff(cosThetha, eta);
+                hasIntersect = raySphereIntersect(intersection, u, true, intersection);
+                computeReflectedRefractedRays(intersection, u, eta, true, reflectedRay,refractedRay);
+                cosThetha = getCosThetha(intersection, u, true);
+                fresnelReflexion = lastCoeff * fresnelCoeff(cosThetha, 1./eta);
                 fresnelTrans = lastCoeff - fresnelReflexion;
-                lastCoeff = fresnelReflexion;//;
+                lastCoeff = fresnelReflexion;
                 u = normalize(reflectedRay);
                 if(!(lastCoeff>1.)){
-                    result.rgb = result.rgb + fresnelTrans * getColorFromEnvironment(refractedRay).rgb + fresnelReflexion * getColorFromEnvironment(reflectedRay).rgb;
+                result = result + fresnelTrans * getColorFromEnvironment(refractedRay);
                 }
             }
         }
-        resultColor.rgb = result.rgb;
+        resultColor = result;
     } else {
         resultColor = getColorFromEnvironment(u);
     }
