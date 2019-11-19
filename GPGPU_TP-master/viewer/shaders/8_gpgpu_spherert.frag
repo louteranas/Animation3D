@@ -119,22 +119,20 @@ vec4 computeResultColor(vec3 u, vec3 eye, int n){
     if(hasIntersect) {
         vec4 result;
         // Step 4: compute reflected and refracted rays
-        int numberOfRebounds = 1;
         computeReflectedRefractedRays(intersection, u, 1./eta, false, reflectedRay,refractedRay);
         float cosThetha = getCosThetha(intersection, u, false);
         float fresnelReflexion = fresnelCoeff(cosThetha, eta);
         float fresnelTrans = 1 - fresnelReflexion;
         float lastCoeff = fresnelTrans;
-        if(numberOfRebounds != 0 && transparent && !(fresnelReflexion>1.)){
+        if(n != 0 && transparent && !(fresnelReflexion>1.)){
             result = fresnelReflexion * getColorFromEnvironment(normalize(reflectedRay));
         }
         else{
             return getColorFromEnvironment(normalize(reflectedRay));
-            
         }
         u = normalize(refractedRay);
-        if(numberOfRebounds >0 && transparent){
-            for(int i = 0; i<numberOfRebounds; i++){
+        if(n >0 && transparent){
+            for(int i = 0; i<n; i++){
                 hasIntersect = raySphereIntersect(intersection, u, true, intersection);
                 computeReflectedRefractedRays(intersection, u, eta, true, reflectedRay,refractedRay);
                 cosThetha = getCosThetha(intersection, u, true);
@@ -169,8 +167,7 @@ void main(void)
     vec3 eye = (mat_inverse * vec4(0, 0, 0, 1)).xyz;
 
     // Step 3: compute frag color
-    // n = number of spheres
+    // n = number of rebounds
     int n = 1;
-    int NumRebounds = 0;
     fragColor = computeResultColor(u, eye, n);
 }
