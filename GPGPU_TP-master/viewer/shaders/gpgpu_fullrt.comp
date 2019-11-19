@@ -136,9 +136,9 @@ bool intersectTriangle(vec4 origin, vec4 dir, int ptr, out vec4 dist)
     // get the coordinates:
     //          (alpha, beta, betaAlpha, lambda)
     //          P+lambda*u = (1-alpha-beta)*v0 + alpha*v1 + beta*v2
-    dist.x = alpha;
-    dist.y = beta;
-    dist.z = betaAlpha;
+    dist.x = betaAlpha;
+    dist.y = alpha;
+    dist.z = beta;
     dist.w = lambda;
 
     return true;
@@ -166,6 +166,12 @@ bool isIntersected(vec4 origin, vec4 dir, out hitinfo_t h)
 		for(int j = 0; j < indices.length(); j += 3) {
             // see if the ray intersect the triangle
 			if(intersectTriangle(origin, dir, j, dist)) {
+                // dist = (1-alpha-beta, alpha, beta, lambda)
+                // lambda for P+lambda*u (intersection)
+                // alpha beta for coord in (v0,v1,v2)
+                // j: ptr for the triangle
+                h.t = dist;
+                h.hit_vptr = j;
                 return true;
 			}
 		}
