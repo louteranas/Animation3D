@@ -45,15 +45,103 @@ layout (std430, binding = 4) buffer Meshes
 };
 
 bool intersectBoundingBox(vec4 origin, vec4 dir) {
-	// TODO
-    float lambda = (bbmin.y - origin.y)/dir.y;
+    /* check intersection between each plan: 
+                x*-orig.x = dir.x*(distance plan)
+                distance plan z max = (zmax - orig.z)/dir.z
+    */
+
+    // plan 1: z max => compute intersection (x,y)
+    float x1 = origin.x+dir.x*((bbmax.z-origin.z)/dir.z);
+    float y1 = origin.y+dir.y*((bbmax.z-origin.z)/dir.z);
+    // if between min and max for both
+    if(bbmin.x <= x1 && x1 <= bbmax.x && bbmin.y <= y1 && y1 <= bbmax.y){
+        return true;
+    }
+
+    // plan 2: z min => compute intersection (x,y)
+    float x2 = origin.x+dir.x*(bbmin.z-origin.z)/dir.z;
+    float y2 = origin.y+dir.y*(bbmin.z-origin.z)/dir.z;
+    // if between min and max for both
+    if(bbmin.x <= x2 && x2 <= bbmax.x && bbmin.y <= y2 && y2 <= bbmax.y){
+        return true;
+    }
+
+    // plan 3: y max => compute intersection (x,y)
+    float x3 = origin.x+dir.x*(bbmax.y-origin.y)/dir.y;
+    float z3 = origin.z+dir.z*(bbmax.y-origin.y)/dir.y;
+    // if between min and max for both
+    if(bbmin.x <= x3 && x3 <= bbmax.x && bbmin.z <= z3 && z3 <= bbmax.z){
+        return true;
+    }
+
+    // plan 4: y min => compute intersection (x,y)
+    float x4 = origin.x+dir.x*(bbmin.y-origin.y)/dir.y;
+    float z4 = origin.z+dir.z*(bbmin.y-origin.y)/dir.y;
+    // if between min and max for both
+    if(bbmin.x <= x4 && x4 <= bbmax.x && bbmin.z <= z4 && z4 <= bbmax.z){
+        return true;
+    }
+
+    // plan 5: x max => compute intersection (x,y)
+    float y5 = origin.y+dir.y*(bbmax.x-origin.x)/dir.x;
+    float z5 = origin.z+dir.z*(bbmax.x-origin.x)/dir.x;
+    // if between min and max for both
+    if(bbmin.y <= y5 && y5 <= bbmax.y && bbmin.z <= z5 && z5 <= bbmax.z){
+        return true;
+    }
+
+    // plan 6: x min => compute intersection (x,y)
+    float y6 = origin.y+dir.y*(bbmin.x-origin.x)/dir.x;
+    float z6 = origin.z+dir.z*(bbmin.x-origin.x)/dir.x;
+    // if between min and max for both
+    if(bbmin.y <= y6 && y6 <= bbmax.y && bbmin.z <= z6 && z6 <= bbmax.z){
+        return true;
+    }
     return false;
 }
 
 bool intersectTriangle(vec4 origin, vec4 dir, int ptr, out vec4 dist) 
 {
-	// TODO
-    return false;
+    // get V0,V1,V2 from vertices (with ptr)
+	vec4 v0 = vertices[indices[ptr]];
+    vec4 v1 = vertices[indices[ptr + 1]];
+    vec4 v2 = vertices[indices[ptr + 2]];
+
+    // compute e1=v1-v0, e2=v2-v0 and t=p-v0 (see slides)
+    vec3 e1 = v1.xyz-v0.xyz;
+    vec3 e2 = v2.xyz-v0.xyz;
+    vec3 t = origin.xyz-v0.xyz;
+
+    // compute q = txe1 and p = dirxe2 (!! vec3 only for cross)
+    vec3 q = cross(t,e1);
+    vec3 p = cross(dir.xyz,e2);
+    
+    // compute lambda alpha beta
+    // 1/(p.e1)
+    float scalar = 1./(dot(p,e1));
+    // scalar * (q.e2)
+    float lambda = scalar*dot(q,e2);
+    // scalar * (p.t)
+    float alpha = scalar*dot(p,t);
+    // scalar * (q.dir)
+    float beta = scalar*dot(q,dir.xyz);
+    // 1-alpha-beta
+    float betaAlpha = 1.-alpha-beta;
+
+    // if outside the triangle (outside [0,1] for each sides)
+    if(alpha < 0 || alpha > 1 || beta < 0 || beta > 1 || betaAlpha < 0 || betaAlpha > 1){
+        return false;
+    }
+
+    // get the coordinates:
+    //          (alpha, beta, betaAlpha, lambda)
+    //          P+lambda*u = (1-alpha-beta)*v0 + alpha*v1 + beta*v2
+    dist.x = alpha;
+    dist.y = beta;
+    dist.z = betaAlpha;
+    dist.w = lambda;
+
+    return true;
 }
 
 vec4 interpolateNormal(hitinfo_t h)
@@ -73,10 +161,12 @@ bool isIntersected(vec4 origin, vec4 dir, out hitinfo_t h)
     vec4 dist; // stores distance + barycentric coord
 	bool hit = false;
 	h.t.x = radius * MAX_SCENE_BOUNDS;
+    // see if the ray intersect the box
 	if(intersectBoundingBox(origin, dir)) {
 		for(int j = 0; j < indices.length(); j += 3) {
+            // see if the ray intersect the triangle
 			if(intersectTriangle(origin, dir, j, dist)) {
-				// TODO
+                return true;
 			}
 		}
 	}
@@ -89,9 +179,9 @@ const int MAX_TRACE = 1;
 vec4 trace(vec4 origin, vec4 dir)
 {
 	// TODO: trace a ray in the scene, see what it intersects, bounce around
-
-    //1) Check if the ray intersects the object bounding box
-    if(intersectBoundingBox(origin, dir)){
+    hitinfo_t h;
+    // 1) Check if the ray intersects the object bounding box and the triangle
+    if(isIntersected(origin, dir,h)){
         return vec4(1,0,0,1);
     } else {
         return normalize(vec4(128,128,128,1));
