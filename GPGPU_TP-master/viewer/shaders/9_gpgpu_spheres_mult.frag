@@ -35,23 +35,23 @@ out vec4 fragColor;
 /****************************************************************************************************************************************************/
 
 // number of spheres
-const int numberOfSpheres = 5;
+const int numberOfSpheres = 2;
 
 // centers
 vec3 centers[numberOfSpheres] = vec3[](
     vec3(center.x, center.y, center.z),
-    vec3(center.x+2*radius, center.y+2*radius, center.z+2*radius),
+    /*vec3(center.x+2*radius, center.y+2*radius, center.z+2*radius),
     vec3(center.x-2*radius, center.y-2*radius, center.z-2*radius),
-    vec3(center.x-2*radius, center.y+2*radius, center.z+2*radius),
+    vec3(center.x-2*radius, center.y+2*radius, center.z+2*radius),*/
     vec3(center.x-2*radius, center.y+2*radius, center.z-2*radius)
 );
 
 // radius
 float radiuss[numberOfSpheres] = float[](
     radius,
+    /*radius,
     radius,
-    radius,
-    radius,
+    radius,*/
     radius
 );
 
@@ -93,16 +93,16 @@ vec4 getColorFromPlane(in vec3 direction){
 **/
 float fresnelCoeff(float cosThethaD, float etaN){
      // Ci coeff 
-     float Ci = sqrt(1.- etaN*etaN*(1. - cosThethaD*cosThethaD));
+     float Ci = pow(max(0, (pow(etaN, 2) - (1 - pow(cosThethaD, 2)))), 0.5);
      // Fs coef
-     float fracFs = abs(etaN*cosThethaD - Ci) / abs(etaN*cosThethaD + Ci);
-     float Fs = fracFs*fracFs;
+     float fracFs = (cosThethaD - Ci) / (cosThethaD + Ci);
+     float Fs = pow(abs(fracFs), 2);
      // Fp coeff
-     float fracFp = abs(etaN*etaN*Ci - cosThethaD) / abs(etaN*etaN*Ci + cosThethaD);
-     float Fp = fracFp*fracFp;
+     float fracFp = (pow(etaN,2)*cosThethaD - Ci) / (pow(etaN,2)*cosThethaD + Ci);
+     float Fp = pow(abs(fracFp), 2);
      ///// Fresnel coeff
-     float F = (Fs + Fp)/2.;
-     if(F > 1.){
+     float F = (Fs + Fp)/2;
+     if(F>1.){
          return 1.;
      }
      return F;
@@ -110,7 +110,7 @@ float fresnelCoeff(float cosThethaD, float etaN){
 
 /* compute cos theta d with u and n */
 float getCosThetha(vec3 normal, vec3 u){
-    return dot(normal, normalize(1.*u));
+    return abs(dot(normal, normalize(u)));
 }
 
 /****************************************************************************************************************************************************/
@@ -120,7 +120,7 @@ float getCosThetha(vec3 normal, vec3 u){
 /* compute ambient lighting when the intersection is in the shadow of a light */
 vec4 computeAmbientLighting(){
     // ambient reflection param 
-     float Ka = 0.7;
+     float Ka = 0.2;
      // setting the ambiantLighting - Ca
      vec4 ambientLight = Ka * lightIntensity * vertColor;
     return ambientLight;
@@ -174,7 +174,7 @@ float GGXDistrib(float cosTheta, float alpha){
 * For more details about the variable names, check the TP page
 **/
 vec4 specularLightingBP(float cosThethaD, vec4 halfVector, vec4 normal){
-    return fresnelCoeff(cosThethaD,1./eta) * vertColor * pow(max(0, dot(normal, halfVector)), shininess) * lightIntensity;
+    return fresnelCoeff(cosThethaD,eta) * vertColor * pow(max(0, dot(normal, halfVector)), shininess) * lightIntensity;
 }
 
 /**
@@ -185,7 +185,7 @@ vec4 specularLightingCT(float cosThethaD, vec4 halfVector, float alpha, vec4 nor
      float cosThetaH = dot(normal,halfVector);
      float cosThetaI = dot(normal,lightVector);
      float cosThetaO = dot(normal,eyeVector);
-     float top = fresnelCoeff(cosThethaD,1./eta) * NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
+     float top = fresnelCoeff(cosThethaD,eta) * NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
      float bottom = 4 * cosThetaI * cosThetaO;
      return (top/bottom)*vertColor*lightIntensity;
 }
@@ -275,6 +275,7 @@ bool raySphereIntersect(in vec3 start, in vec3 direction, out int indexSphere, o
     int counterSphere = 0;
     float lambda; 
     float lambdaMin;
+    int index;
 
     // compute intersection, computing lambda minimum
     for(int i = 0; i< numberOfSpheres; i++){
@@ -284,12 +285,12 @@ bool raySphereIntersect(in vec3 start, in vec3 direction, out int indexSphere, o
             // save lambda or not
             if(counterSphere == 0){
                 lambdaMin = lambda;
-                indexSphere = i;
+                index = i;
                 counterSphere += 1;
             } else {
                 if(lambda < lambdaMin){
                     lambdaMin = lambda;
-                    indexSphere = i;
+                    index = i;
                     counterSphere += 1;
                 }
             }
@@ -302,7 +303,8 @@ bool raySphereIntersect(in vec3 start, in vec3 direction, out int indexSphere, o
         // compute intersection = P+lambdaMin*u
         intersection = start + lambdaMin*direction;
         // compute normal
-        normal = intersection - centers[indexSphere];
+        normal = intersection - centers[index];
+        indexSphere = index;
         return true;
     }
 }
@@ -338,6 +340,9 @@ vec4 getColorFromLightSource(in vec3 u, in vec3 start, in vec3 normal, in int in
     for(int i = 0; i< numberOfSpheres; i++){
         if(indexSphere != i){
             intersect = intersect || raySphereIntersectOne(start,direction,i,lambda);
+            if(lambda == radiuss[indexSphere]){
+                intersect = false;
+            }
         }
     }
     
@@ -425,8 +430,8 @@ vec4 computeResultColor(vec3 u, vec3 eye){
         stackOfColors[counter] = getColorFromLightSource(u,intersection, normal, indexSphere);
         // compute fresnel coeff
         float cosThethaD = getCosThetha(normal, u);
-        float F = fresnelCoeff(cosThethaD, 1./eta);
-        stackOfFresnel[counter] = F;
+        float F = fresnelCoeff(cosThethaD, eta);
+        stackOfFresnel[counter] = F;//0.75;
 
         // next
         counter += 1;
@@ -438,7 +443,7 @@ vec4 computeResultColor(vec3 u, vec3 eye){
 
     /* 3) COMPUTE RESULT COLOR */
     // base: black
-    resultColor = vec4(0.,0.,0.,1.);
+    resultColor = vec4(1.,0.,0.,1.);
 
     // if one bound at least
     if(counter != 0){
@@ -451,7 +456,7 @@ vec4 computeResultColor(vec3 u, vec3 eye){
         // for all the rays
         for(int j = counter; j>=0; j--){
             // color = F(j)*color_next + color(j)
-            resultColor = stackOfFresnel[j]*resultColor + stackOfColors[j];
+            resultColor =  (stackOfFresnel[j])*resultColor + stackOfColors[j];
         }
     } else {
         // if u intersect a plane
