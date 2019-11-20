@@ -157,6 +157,27 @@ vec4 computeSpecularLighting(in vec4 vertColor, in vec4 normal, in vec4 lightVec
     return specularLighting; 
 }
 
+/* compute color from plane */
+vec4 getColorFromPlane(in vec4 direction){
+    // the env map is like an infinite sphere arround the world
+    // so the first thing to do is to transform the direction coords into 
+    //sheprique coords, then we know that thi is in -pi, pi 
+    //and Theta between 0 ans 2*Pi, so we transform this to get a value between 0 and 1 
+    // in order to be able to use the function Texture 2D that return the frag color coresponding
+    //point of the ray's impact with the env Map
+    vec2 coord2D; // our interpolated coords between 0 and 1  
+    float thi; // the angle between the X axis and the direction vector's pro111jection on the plane XY
+    float theta; // the angle between the Z axis and the direction vector 
+    // 
+    float scalar = dot(normalize(direction.xyz), vec3(0, -1, 0));
+    theta = acos(scalar); // we change the direction of the vector to not get a flipped reflection
+    thi = atan(direction.x, direction.z); 
+    coord2D.x = 0.5 + thi/(2*M_PI); // projection on the interval 0-1
+    coord2D.y = theta/M_PI; // projection on the interval 0-1
+
+    return texture2D(colorTexture,coord2D);
+}
+
 
 bool intersectBoundingBox(vec4 origin, vec4 dir) {
     /* check intersection between each plan: 
@@ -265,7 +286,7 @@ vec4 interpolateNormal(hitinfo_t h)
     vec4 n1 = normals[indices[h.hit_vptr+1]];
     vec4 n2 = normals[indices[h.hit_vptr+2]];
     vec3 coeffs = h.coeffs;
-    vec4 normal = normalize(-1*(coeffs.x*n0+coeffs.y*n1+coeffs.z*n2));
+    vec4 normal = normalize((coeffs.x*n0+coeffs.y*n1+coeffs.z*n2));
     return normal;
 }
 
@@ -278,6 +299,26 @@ vec4 interpolateColor(hitinfo_t h)
     vec3 coeffs = h.coeffs;
     vec4 color = coeffs.x*c0+coeffs.y*c1+coeffs.z*c2;
     return color;
+}
+
+/* compute if u intersect with the plane defined by point Q and normal n */
+bool rayPlaneIntersect(in vec4 start, in vec4 u, out vec4 intersection){
+    // define the plane
+    vec4 Q = vec4(0,-groundDistance,0,1);
+    vec4 n = vec4(0,1,0,0);
+
+    // compute intersection
+    vec4 PQ = Q-start;
+    float lambda = (dot(PQ,n)/dot(u,n));
+    if(dot(u,n)>EPS){
+        return false;
+    }
+    if(lambda > 0){
+        intersection = start+lambda*u;
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool isIntersected(vec4 origin, vec4 dir, out hitinfo_t h)
@@ -314,7 +355,7 @@ const int MAX_TRACE = 1;
 
 // checks if a point is illuminated
 bool inShadow(hitinfo_t startPoint){
-    vec4 dir = normalize(vec4(lightPosition - startPoint.t.xyz, 1));
+    vec4 dir = normalize(-1*vec4(lightPosition - startPoint.t.xyz, 1));
     hitinfo_t newH;
     bool pInShadow = false;
     if(isIntersected(startPoint.t, dir, newH)){
@@ -324,6 +365,7 @@ bool inShadow(hitinfo_t startPoint){
     }
     return pInShadow;
 }
+
 vec4 trace(vec4 origin, vec4 dir)
 {
 	// TODO: trace a ray in the scene, see what it intersects, bounce around
@@ -343,7 +385,7 @@ vec4 trace(vec4 origin, vec4 dir)
         // parameters for specular and diffuse
         vec4 vertNormal = interpolateNormal(h);
         vec4 lightVector = normalize(vec4(lightPosition-h.t.xyz,0));
-        vec4 eyeVector = normalize(dir);
+        vec4 eyeVector = normalize(-1*dir);
 
         // diffuse lighting
         vec4 diffuseLighting = computeDiffuseLighting(vertColor, vertNormal, lightVector);
@@ -351,7 +393,31 @@ vec4 trace(vec4 origin, vec4 dir)
         vec4 specularLighting = computeSpecularLighting(vertColor, vertNormal,lightVector, eyeVector);
 
         return ambientLighting + diffuseLighting + specularLighting;
+
     } else {
+        vec4 intersection;
+        if(rayPlaneIntersect(origin, dir, intersection)){
+            vec4 colorPlane = texture2D(colorTexture,intersection.xz/100.);
+
+            // ambient lighting
+            vec4 ambientLighting = computeAmbientLighting(colorPlane);
+
+            h.t = intersection;
+            h.hit_vptr = -1;
+            if(inShadow(h)){
+                return ambientLighting;
+            }
+            // parameters for specular and diffuse
+            vec4 vertNormal = vec4(0,1,0,0);
+            vec4 lightVector = normalize(vec4(lightPosition-h.t.xyz,0));
+            vec4 eyeVector = normalize(-1*dir);
+
+            // diffuse lighting
+            vec4 diffuseLighting = computeDiffuseLighting(colorPlane, vertNormal, lightVector);
+            // specular lighting
+            vec4 specularLighting = computeSpecularLighting(colorPlane, vertNormal,lightVector, eyeVector);
+            return ambientLighting + diffuseLighting + specularLighting;
+        }
         return normalize(vec4(128,128,128,1));
     }
 }
