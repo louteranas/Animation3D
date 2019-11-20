@@ -102,7 +102,7 @@ float fresnelCoeff(float cosThethaD, float etaN){
      float Fp = pow(abs(fracFp), 2);
      ///// Fresnel coeff
      float F = (Fs + Fp)/2;
-     if(F>1.){
+     if(F>1. || isnan(F)){
          return 1.;
      }
      return F;
@@ -110,7 +110,7 @@ float fresnelCoeff(float cosThethaD, float etaN){
 
 /* compute cos theta d with u and n */
 float getCosThetha(vec3 normal, vec3 u){
-    return abs(dot(normal, normalize(u)));
+    return abs(dot(normal, normalize(-1*u)));
 }
 
 /****************************************************************************************************************************************************/
