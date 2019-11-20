@@ -1,4 +1,5 @@
 #version 430 core
+#define M_PI 3.14159265358979323846
 
 layout(binding = 0, rgba32f) uniform writeonly image2D framebuffer;
 
@@ -14,6 +15,7 @@ uniform vec3 bbmax;
 uniform float radius;
 uniform float groundDistance;
 uniform vec3 center;
+uniform bool blinnPhong;
 
 #define MAX_SCENE_BOUNDS    10.0
 #define EPS                 0.000001
@@ -22,6 +24,7 @@ uniform vec3 center;
 struct hitinfo_t {
     vec4 t;
     int hit_vptr;
+    vec3 coeffs;
 };
 
 layout (std430, binding = 1) buffer Vertices
@@ -43,6 +46,117 @@ layout (std430, binding = 4) buffer Meshes
 {
     int indices[];
 };
+
+float fresnelCoeff(float cosThethaD, float etaN){
+     // Ci coeff 
+     float Ci = pow(max(0, (pow(etaN, 2) - (1 - pow(cosThethaD, 2)))), 0.5);
+     // Fs coef
+     float fracFs = (cosThethaD - Ci) / (cosThethaD + Ci);
+     float Fs = pow(abs(fracFs), 2);
+     // Fp coeff
+     float fracFp = (pow(etaN,2)*cosThethaD - Ci) / (pow(etaN,2)*cosThethaD + Ci);
+     float Fp = pow(abs(fracFp), 2);
+     ///// Fresnel coeff
+     float F = (Fs + Fp)/2;
+     if(F > 1.0){
+         return 1.0;
+     }
+     return F;
+}
+
+/* compute ambient lighting when the intersection is in the shadow of a light */
+vec4 computeAmbientLighting(in vec4 vertColor){
+    // ambient reflection param 
+     float Ka = 0.2;
+     // setting the ambiantLighting - Ca
+     vec4 ambientLight = Ka * lightIntensity * vertColor;
+    return ambientLight;
+}
+
+/* compute diffuse lighting */
+vec4 computeDiffuseLighting(in vec4 vertColor, in vec4 vertNormal, in vec4 lightVector){
+    vec4 diffuseLighting;
+    // Diffuse reflection param 
+    float Kd = 0.7;
+    // setting the Diffuse lighting - Cd
+    diffuseLighting = Kd * vertColor * lightIntensity * max(0, dot(vertNormal, lightVector));
+    return diffuseLighting;
+}
+
+/**
+* this fuction calculate the microfacet normal distribution D(thetaH)
+* For more details about the variable names, check the TP page
+**/
+bool indicatrice(float cosThetaH){
+     if(cosThetaH < 0){
+          return false;
+     }
+     return true;
+     // maybe it's okay because theta is positive 
+     // if not, so the graph and lights are reversed and we have theta positive
+}
+
+float NormalDistrib(float cosThetaH, float alpha){
+     if(!indicatrice(cosThetaH)){
+          return 0;
+     }
+     float frac1 = 1 / (pow(cosThetaH, 4) * M_PI);
+     float tanThetaSquare = (1 - pow(cosThetaH, 2))/pow(cosThetaH, 2);
+     float frac2 = pow(alpha/100, 2)/ pow((pow(alpha/100, 2) + pow(tanThetaSquare, 2)), 2);
+     return frac1 * frac2;
+}
+
+/**
+* this fuction calculate the GGX distribution G1(thetaI/thetaO)
+* For more details about the variable names, check the TP page
+**/
+float GGXDistrib(float cosTheta, float alpha){
+     float tanThetaSquare = (1 - pow(cosTheta, 2))/pow(cosTheta, 2);
+     float base = 1 + sqrt(1 + tanThetaSquare * pow(alpha/100, 2));
+     return 2 / base;
+}
+
+/**
+* this fuction calculate the specular lighting using the blinn-phing model
+* For more details about the variable names, check the TP page
+**/
+vec4 specularLightingBP(in vec4 vertColor, float cosThethaD, vec4 halfVector, vec4 normal){
+    return fresnelCoeff(cosThethaD,eta) * vertColor * pow(max(0, dot(normal, halfVector)), shininess) * lightIntensity;
+}
+
+/**
+* this fuction calculate the specular lighting using the cook-torrance model
+* For more details about the variable names, check the TP page
+**/
+vec4 specularLightingCT(in vec4 vertColor, float cosThethaD, vec4 halfVector, float alpha, vec4 normal, vec4 lightVector, vec4 eyeVector){
+     float cosThetaH = dot(normal,halfVector);
+     float cosThetaI = dot(normal,lightVector);
+     float cosThetaO = dot(normal,eyeVector);
+     float top = fresnelCoeff(cosThethaD,eta) * NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
+     float bottom = 4 * cosThetaI * cosThetaO;
+     return (top/bottom)*vertColor*lightIntensity;
+}
+
+/* compute specular lighting */
+vec4 computeSpecularLighting(in vec4 vertColor, in vec4 normal, in vec4 lightVector, in vec4 eyeVector){
+    vec4 specularLighting;
+
+    // shininess and alpha reversed
+    float alpha = (2.-shininess/100);
+    
+    // ThetaD, angle between normal & lightVector we only need its cos value
+    vec4 halfVector = normalize(lightVector + eyeVector);
+    float cosThethaD = dot(halfVector, lightVector); // /(length(halfVector)*length(lightVector)) ? what is the correct formula? OK because normalize :);
+    if(blinnPhong)
+        // using the blinn phong model
+        specularLighting = specularLightingBP(vertColor, cosThethaD, halfVector, normal);
+    else {
+        // using the cook torrance model
+        specularLighting = specularLightingCT(vertColor, cosThethaD, halfVector, alpha, normal, lightVector, eyeVector);
+    }
+    return specularLighting; 
+}
+
 
 bool intersectBoundingBox(vec4 origin, vec4 dir) {
     /* check intersection between each plan: 
@@ -146,14 +260,24 @@ bool intersectTriangle(vec4 origin, vec4 dir, int ptr, out vec4 dist)
 
 vec4 interpolateNormal(hitinfo_t h)
 {
-	// TODO
-    return vec4(1);
+	// compute normal of the intersection
+    vec4 n0 = normals[indices[h.hit_vptr]];
+    vec4 n1 = normals[indices[h.hit_vptr+1]];
+    vec4 n2 = normals[indices[h.hit_vptr+2]];
+    vec3 coeffs = h.coeffs;
+    vec4 normal = normalize(-1*(coeffs.x*n0+coeffs.y*n1+coeffs.z*n2));
+    return normal;
 }
 
 vec4 interpolateColor(hitinfo_t h)
 {
-	// TODO
-	return vec4(1);
+    // compute color of the intersection
+	vec4 c0 = colors[indices[h.hit_vptr]];
+    vec4 c1 = colors[indices[h.hit_vptr+1]];
+    vec4 c2 = colors[indices[h.hit_vptr+2]];
+    vec3 coeffs = h.coeffs;
+    vec4 color = coeffs.x*c0+coeffs.y*c1+coeffs.z*c2;
+    return color;
 }
 
 bool isIntersected(vec4 origin, vec4 dir, out hitinfo_t h)
@@ -175,6 +299,7 @@ bool isIntersected(vec4 origin, vec4 dir, out hitinfo_t h)
                 if(dist.w < minLambda ){
                     h.t = origin + dist.w*dir;//dist;
                     h.hit_vptr = j;
+                    h.coeffs = dist.xyz;
                     minLambda = dist.w;
                 }
                 hit = true;
@@ -205,10 +330,27 @@ vec4 trace(vec4 origin, vec4 dir)
     hitinfo_t h;
     // 1) Check if the ray intersects the object bounding box and the triangle
     if(isIntersected(origin, dir, h)){
+        vec4 vertColor = interpolateColor(h);
+
+        // ambient lighting
+        vec4 ambientLighting = computeAmbientLighting(vertColor);
+
+        // if in shadow: ambient lighting
         if(inShadow(h)){
-            return vec4(0,0,0,1);
+            return ambientLighting;
         }
-        return vec4(1,0,0,1);
+
+        // parameters for specular and diffuse
+        vec4 vertNormal = interpolateNormal(h);
+        vec4 lightVector = normalize(vec4(lightPosition-h.t.xyz,0));
+        vec4 eyeVector = normalize(dir);
+
+        // diffuse lighting
+        vec4 diffuseLighting = computeDiffuseLighting(vertColor, vertNormal, lightVector);
+        // specular lighting
+        vec4 specularLighting = computeSpecularLighting(vertColor, vertNormal,lightVector, eyeVector);
+
+        return ambientLighting + diffuseLighting + specularLighting;
     } else {
         return normalize(vec4(128,128,128,1));
     }
