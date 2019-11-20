@@ -219,7 +219,7 @@ vec4 computeColorFromLightSource(in bool intersect, in vec3 start, in vec3 u, in
     */
     vec4 vertNormal = normalize(vec4(normal.xyz,1.));
     vec4 lightVector = normalize(vec4(lightPosition,1)-vec4(start,1));
-    vec4 eyeVector = normalize(vec4(-1*u,1));
+    vec4 eyeVector = normalize(vec4(u,1));
 
     // ambient lighting
     vec4 ambientLighting = computeAmbientLighting();
@@ -262,6 +262,9 @@ bool raySphereIntersectOne(in vec3 start, in vec3 direction, in int indexSphere,
     if(delta >= 0){
         // compute lambda: (-b-sqrt(delta))/2a
         lambda = (-2.*cpU-sqrt(delta))/2.;
+        if(lambda < 0.){
+            return false;
+        }
         return true;
     } else {
         return false;
@@ -337,12 +340,18 @@ vec4 getColorFromLightSource(in vec3 u, in vec3 start, in vec3 normal, in int in
     bool intersect = false;
     vec3 direction = normalize(lightPosition.xyz-start);
     float lambda = 0;
+    if(dot(direction,normal) < 0.){
+        return computeAmbientLighting();
+    }
     for(int i = 0; i< numberOfSpheres; i++){
         if(indexSphere != i){
-            intersect = intersect || raySphereIntersectOne(start,direction,i,lambda);
-            if(lambda == radiuss[indexSphere]){
-                intersect = false;
+            intersect = raySphereIntersectOne(start,direction,i,lambda);
+            if(intersect){
+                return computeAmbientLighting();
             }
+            // if(lambda == radiuss[indexSphere]){
+            //     intersect = false;
+            // }
         }
     }
     
@@ -443,17 +452,18 @@ vec4 computeResultColor(vec3 u, vec3 eye){
 
     /* 3) COMPUTE RESULT COLOR */
     // base: black
-    resultColor = vec4(1.,0.,0.,1.);
+    resultColor = vec4(0.,0.,0.,1.);
 
     // if one bound at least
     if(counter != 0){
         counter-=1;
-        // if last ray intersect a plane
-        if(rayPlaneIntersect(stackOfIntersections[counter],stackOfIncoming[counter],intersection)){
-            // get color from a plane
-            resultColor = getColorFromPlane(u);
-        }
+        // // if last ray intersect a plane
+        // if(rayPlaneIntersect(stackOfIntersections[counter],stackOfIncoming[counter],intersection)){
+        //     // get color from a plane
+        //     resultColor = getColorFromPlane(u);
+        // }
         // for all the rays
+        resultColor = vec4(0.,0.,0.,1.);
         for(int j = counter; j>=0; j--){
             // color = F(j)*color_next + color(j)
             resultColor =  (stackOfFresnel[j])*resultColor + stackOfColors[j];
