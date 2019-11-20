@@ -33,7 +33,13 @@ out vec4 fragColor;
 /****************************************************************************************************************************************************/
 /*********************************************************** DEFINE OTHER SPHERES *******************************************************************/
 /****************************************************************************************************************************************************/
-
+struct intersection_t {
+        vec3 Intersections;
+        vec3 Normals;
+        vec3 Incoming;
+        vec4 Colors;
+        float Fresnel;
+};
 // number of spheres
 const int numberOfSpheres = 5;
 
@@ -385,56 +391,10 @@ vec4 computeResultColor(vec3 u, vec3 eye){
 
     /* 1) INIT STACKS */
     // limit for number of bounds
-    const int limit = 10;
-    vec3 stackOfIntersections[limit] = vec3[](
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0)
-    );
-    vec3 stackOfNormals[limit] = vec3[](
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0)
-    );
-    vec4 stackOfColors[limit] = vec4[](
-        vec4(0.0,0.0,0.0,1.0),
-        vec4(0.0,0.0,0.0,1.0),
-        vec4(0.0,0.0,0.0,1.0),
-        vec4(0.0,0.0,0.0,1.0),
-        vec4(0.0,0.0,0.0,1.0),
-        vec4(0.0,0.0,0.0,1.0),
-        vec4(0.0,0.0,0.0,1.0),
-        vec4(0.0,0.0,0.0,1.0),
-        vec4(0.0,0.0,0.0,1.0),
-        vec4(0.0,0.0,0.0,1.0)
-    );
-    vec3 stackOfIncoming[limit] = vec3[](
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0),
-        vec3(0.0,0.0,0.0)
-    );
-    float stackOfFresnel[limit] = float[](0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0);
+    
+    
+    const int limit = 100;
+    intersection_t intersectionInfos[limit];
     int counter = 0;
 
     // 2) FOLLOW THE RAY 
@@ -442,15 +402,15 @@ vec4 computeResultColor(vec3 u, vec3 eye){
     bool intersectSphere = raySphereIntersect(eye, u, indexSphere,intersection,normal);
     while(counter < limit && intersectSphere){
         // update information about the intersection, normal, color and incoming direction
-        stackOfIntersections[counter].xyz = intersection.xyz;
-        stackOfNormals[counter].xyz = normal.xyz;
-        stackOfIncoming[counter].xyz = u.xyz;
+        intersectionInfos[counter].Intersections.xyz = intersection.xyz;
+        intersectionInfos[counter].Normals.xyz = normal.xyz;
+        intersectionInfos[counter].Incoming.xyz = u.xyz;
         // compute color from light source (ambient+diffuse+specular)
-        stackOfColors[counter] = getColorFromLightSource(u,intersection, normal, indexSphere);
+        intersectionInfos[counter].Colors = getColorFromLightSource(u,intersection, normal, indexSphere);
         // compute fresnel coeff
         float cosThethaD = getCosThetha(normal, u);
         float F = fresnelCoeff(cosThethaD, eta);
-        stackOfFresnel[counter] = F;//0.75;
+        intersectionInfos[counter].Fresnel = F;//0.75;
 
         // next
         // new reflected ray
@@ -463,20 +423,19 @@ vec4 computeResultColor(vec3 u, vec3 eye){
 
     /* 3) COMPUTE RESULT COLOR */
     // base: black
-    resultColor = getColorFromEnvironnement(u);
+    resultColor = vec4(0, 0, 0, 1);
+    if(!transparent){
+        resultColor = getColorFromEnvironnement(u);
+    }
+    
 
     // if one bound at least
     if(counter != 0){
         counter-=1;
-        // // if last ray intersect a plane
-        // if(rayPlaneIntersect(stackOfIntersections[counter],stackOfIncoming[counter],intersection)){
-        //     // get color from a plane
-        //     resultColor = getColorFromPlane(u);
-        // }
         // for all the rays
         for(int j = counter; j>=0; j--){
             // color = F(j)*color_next + color(j)
-            resultColor =  (stackOfFresnel[j])*resultColor + stackOfColors[j];
+            resultColor =  (intersectionInfos[j].Fresnel)*resultColor + intersectionInfos[j].Colors;
         }
     }
     return resultColor;
