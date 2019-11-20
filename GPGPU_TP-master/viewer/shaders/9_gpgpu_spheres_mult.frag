@@ -35,24 +35,33 @@ out vec4 fragColor;
 /****************************************************************************************************************************************************/
 
 // number of spheres
-const int numberOfSpheres = 2;
+const int numberOfSpheres = 5;
 
 // centers
 vec3 centers[numberOfSpheres] = vec3[](
     vec3(center.x, center.y, center.z),
-    /*vec3(center.x+2*radius, center.y+2*radius, center.z+2*radius),
+    vec3(center.x, center.y-(100010+radius), center.z),
     vec3(center.x-2*radius, center.y-2*radius, center.z-2*radius),
-    vec3(center.x-2*radius, center.y+2*radius, center.z+2*radius),*/
+    vec3(center.x-2*radius, center.y+2*radius, center.z+2*radius),
     vec3(center.x-2*radius, center.y+2*radius, center.z-2*radius)
 );
 
 // radius
 float radiuss[numberOfSpheres] = float[](
     radius,
-    /*radius,
+    100000,
     radius,
-    radius,*/
+    radius,
     radius
+);
+
+// colors
+vec4 colors[numberOfSpheres] = vec4[](
+    vec4(117, 87, 114, 1)/255.,
+    vec4(38, 87, 114, 1)/255.,
+    vec4(222, 100, 9, 1)/255.,
+    vec4(152, 201, 233,1)/255.,
+    vec4(250, 246, 263,1)/255.
 );
 
 /****************************************************************************************************************************************************/
@@ -60,7 +69,7 @@ float radiuss[numberOfSpheres] = float[](
 /****************************************************************************************************************************************************/
 
 /* compute color from plane */
-vec4 getColorFromPlane(in vec3 direction){
+vec4 getColorFromEnvironnement(in vec3 direction){
     // the env map is like an infinite sphere arround the world
     // so the first thing to do is to transform the direction coords into 
     //sheprique coords, then we know that thi is in -pi, pi 
@@ -118,21 +127,21 @@ float getCosThetha(vec3 normal, vec3 u){
 /****************************************************************************************************************************************************/
 
 /* compute ambient lighting when the intersection is in the shadow of a light */
-vec4 computeAmbientLighting(){
+vec4 computeAmbientLighting(in vec4 vColor){
     // ambient reflection param 
      float Ka = 0.2;
      // setting the ambiantLighting - Ca
-     vec4 ambientLight = Ka * lightIntensity * vertColor;
+     vec4 ambientLight = Ka * lightIntensity * vColor;
     return ambientLight;
 }
 
 /* compute diffuse lighting */
-vec4 computeDiffuseLighting(in vec4 vertNormal, in vec4 lightVector){
+vec4 computeDiffuseLighting(in vec4 vColor,in vec4 vertNormal, in vec4 lightVector){
     vec4 diffuseLighting;
     // Diffuse reflection param 
     float Kd = 0.7;
     // setting the Diffuse lighting - Cd
-    diffuseLighting = Kd * vertColor * lightIntensity * max(0, dot(vertNormal, lightVector));
+    diffuseLighting = Kd * vColor * lightIntensity * max(0, dot(vertNormal, lightVector));
     return diffuseLighting;
 }
 
@@ -173,25 +182,25 @@ float GGXDistrib(float cosTheta, float alpha){
 * this fuction calculate the specular lighting using the blinn-phing model
 * For more details about the variable names, check the TP page
 **/
-vec4 specularLightingBP(float cosThethaD, vec4 halfVector, vec4 normal){
-    return fresnelCoeff(cosThethaD,eta) * vertColor * pow(max(0, dot(normal, halfVector)), shininess) * lightIntensity;
+vec4 specularLightingBP(in vec4 vColor,float cosThethaD, vec4 halfVector, vec4 normal){
+    return fresnelCoeff(cosThethaD,eta) * vColor * pow(max(0, dot(normal, halfVector)), shininess) * lightIntensity;
 }
 
 /**
 * this fuction calculate the specular lighting using the cook-torrance model
 * For more details about the variable names, check the TP page
 **/
-vec4 specularLightingCT(float cosThethaD, vec4 halfVector, float alpha, vec4 normal, vec4 lightVector, vec4 eyeVector){
+vec4 specularLightingCT(in vec4 vColor, float cosThethaD, vec4 halfVector, float alpha, vec4 normal, vec4 lightVector, vec4 eyeVector){
      float cosThetaH = dot(normal,halfVector);
      float cosThetaI = dot(normal,lightVector);
      float cosThetaO = dot(normal,eyeVector);
      float top = fresnelCoeff(cosThethaD,eta) * NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
      float bottom = 4 * cosThetaI * cosThetaO;
-     return (top/bottom)*vertColor*lightIntensity;
+     return (top/bottom)*vColor*lightIntensity;
 }
 
 /* compute specular lighting */
-vec4 computeSpecularLighting(in vec4 normal, in vec4 lightVector, in vec4 eyeVector){
+vec4 computeSpecularLighting(in vec4 vColor, in vec4 normal, in vec4 lightVector, in vec4 eyeVector){
     vec4 specularLighting;
 
     // shininess and alpha reversed
@@ -202,16 +211,16 @@ vec4 computeSpecularLighting(in vec4 normal, in vec4 lightVector, in vec4 eyeVec
     float cosThethaD = dot(halfVector, lightVector); // /(length(halfVector)*length(lightVector)) ? what is the correct formula? OK because normalize :);
     if(blinnPhong)
         // using the blinn phong model
-        specularLighting = specularLightingBP(cosThethaD, halfVector, normal);
+        specularLighting = specularLightingBP(vColor,cosThethaD, halfVector, normal);
     else {
         // using the cook torrance model
-        specularLighting = specularLightingCT(cosThethaD, halfVector, alpha, normal, lightVector, eyeVector);
+        specularLighting = specularLightingCT(vColor,cosThethaD, halfVector, alpha, normal, lightVector, eyeVector);
     }
     return specularLighting; 
 }
 
 /* compute color source lighting */
-vec4 computeColorFromLightSource(in bool intersect, in vec3 start, in vec3 u, in vec3 normal){
+vec4 computeColorFromLightSource(in vec4 vColor,in bool intersect, in vec3 start, in vec3 u, in vec3 normal){
     /* parameters
         - vertNormal = normal
         - lightVector = position light - start
@@ -222,15 +231,15 @@ vec4 computeColorFromLightSource(in bool intersect, in vec3 start, in vec3 u, in
     vec4 eyeVector = normalize(vec4(u,1));
 
     // ambient lighting
-    vec4 ambientLighting = computeAmbientLighting();
+    vec4 ambientLighting = computeAmbientLighting(vColor);
 
     if(intersect){
         return ambientLighting;
     } else {
         // diffuse lighting
-        vec4 diffuseLighting = computeDiffuseLighting(vertNormal, lightVector);
+        vec4 diffuseLighting = computeDiffuseLighting(vColor,vertNormal, lightVector);
         // specular lighting
-        vec4 specularLighting = computeSpecularLighting(vertNormal,lightVector, eyeVector);
+        vec4 specularLighting = computeSpecularLighting(vColor,vertNormal,lightVector, eyeVector);
         return ambientLighting + diffuseLighting + specularLighting;
     }
 }
@@ -337,17 +346,18 @@ bool rayPlaneIntersect(in vec3 start, in vec3 u, out vec3 intersection){
 vec4 getColorFromLightSource(in vec3 u, in vec3 start, in vec3 normal, in int indexSphere)
 {
     // 1) VERIFY IF INTERSECT A SPHERE
+    vec4 vColor = colors[indexSphere];
     bool intersect = false;
     vec3 direction = normalize(lightPosition.xyz-start);
     float lambda = 0;
     if(dot(direction,normal) < 0.){
-        return computeAmbientLighting();
+        return computeAmbientLighting(vColor);
     }
     for(int i = 0; i< numberOfSpheres; i++){
         if(indexSphere != i){
             intersect = raySphereIntersectOne(start,direction,i,lambda);
             if(intersect){
-                return computeAmbientLighting();
+                return computeAmbientLighting(vColor);
             }
             // if(lambda == radiuss[indexSphere]){
             //     intersect = false;
@@ -356,7 +366,7 @@ vec4 getColorFromLightSource(in vec3 u, in vec3 start, in vec3 normal, in int in
     }
     
     // 2) COLOR
-    return computeColorFromLightSource(intersect, start, u, normal);
+    return computeColorFromLightSource(vColor,intersect, start, u, normal);
 }
 
 /****************************************************************************************************************************************************/
@@ -443,16 +453,17 @@ vec4 computeResultColor(vec3 u, vec3 eye){
         stackOfFresnel[counter] = F;//0.75;
 
         // next
-        counter += 1;
         // new reflected ray
         reflectedRay = reflect(u, normal);
         u = normalize(reflectedRay);
+        counter += 1;
+        
         intersectSphere = raySphereIntersect(intersection,u,indexSphere,intersection,normal);
     }
 
     /* 3) COMPUTE RESULT COLOR */
     // base: black
-    resultColor = vec4(0.,0.,0.,1.);
+    resultColor = getColorFromEnvironnement(u);
 
     // if one bound at least
     if(counter != 0){
@@ -463,18 +474,10 @@ vec4 computeResultColor(vec3 u, vec3 eye){
         //     resultColor = getColorFromPlane(u);
         // }
         // for all the rays
-        resultColor = vec4(0.,0.,0.,1.);
         for(int j = counter; j>=0; j--){
             // color = F(j)*color_next + color(j)
             resultColor =  (stackOfFresnel[j])*resultColor + stackOfColors[j];
         }
-    } else {
-        // if u intersect a plane
-        if(rayPlaneIntersect(eye,u,intersection)){
-            // get color from a plane
-            resultColor = getColorFromPlane(u);
-        }
-        // else: black
     }
     return resultColor;
 }
