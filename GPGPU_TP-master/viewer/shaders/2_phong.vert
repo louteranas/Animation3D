@@ -6,6 +6,10 @@ uniform mat3 normalMatrix;
 uniform bool noColor;
 uniform vec3 lightPosition;
 
+// Shadow Mapping
+uniform mat4 matrixLight;
+uniform mat4 perspectiveLight;
+
 // World coordinates
 in vec4 vertex;
 in vec4 normal;
@@ -15,6 +19,7 @@ in vec4 color;
 out vec4 eyeVector;
 out vec4 lightVector;
 out vec4 lightSpace; // placeholder for shadow mapping
+out vec4 positionScreen;
 out vec4 vertColor;
 out vec4 vertNormal;
 
@@ -36,6 +41,10 @@ void main( void )
     lightVector = normalize(vertexPositionCS - lightPosCS);
     vec4 eyePosition = vec4(0.0, 0.0, 0.0, 1.0);
     eyeVector = normalize(eyePosition - vertexPositionCS);
+
+    // shadow mapping
+    lightSpace = perspectiveLight * matrixLight * vertex;
+    positionScreen = perspective * matrix * vertex;
 
     // gl_position is the vertex position in screen space
     gl_Position = perspective * matrix * vertex;

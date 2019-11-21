@@ -12,7 +12,10 @@ in vec4 eyeVector;
 in vec4 lightVector;
 in vec4 vertColor;
 in vec4 vertNormal;
+
+// shadow mapping
 in vec4 lightSpace;
+out vec4 positionScreen;
 
 out vec4 fragColor;
 
@@ -175,5 +178,19 @@ void main( void )
      /************** 
      object color is the sum of ambient, specular and diffuse lights with the object base color 
      ***************/
-     fragColor = ambientLight + diffuseLighting + specularLighting;
+     // fragColor = ambientLight + diffuseLighting + specularLighting;
+
+     // shadow mapping
+     // http://www.opengl-tutorial.org/fr/intermediate-tutorials/tutorial-16-shadow-mapping/
+     // https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping
+     // https://learnopengl.com/Advanced-Lighting/Shadows/Point-Shadows
+
+     float depthValue = (texture(shadowMap, lightSpace.xy).z);
+     float distanceLightSource = lightSpace.z;
+     
+     if(depthValue < distanceLightSource){
+          fragColor = ambientLight;
+     } else {
+          fragColor = ambientLight + diffuseLighting + specularLighting;
+     }
 }

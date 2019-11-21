@@ -1307,6 +1307,8 @@ void glShaderWindow::render()
     if (m_program->uniformLocation("shadowMap") != -1) {
         m_program->setUniformValue("shadowMap", 2);
         // TODO_shadowMapping: send the right transform here
+        m_program->setUniformValue("matrixLight", lightCoordMatrix);
+        m_program->setUniformValue("perspectiveLight", lightPerspective);
     }
 
     m_vao.bind();
@@ -1334,6 +1336,8 @@ void glShaderWindow::render()
         if (ground_program->uniformLocation("shadowMap") != -1) {
             ground_program->setUniformValue("shadowMap", 2);
             // TODO_shadowMapping: send the right transform here
+            m_program->setUniformValue("matrixLight", lightCoordMatrix);
+            m_program->setUniformValue("perspectiveLight", lightPerspective);
         }
         ground_vao.bind();
         glDrawElements(GL_TRIANGLES, g_numIndices, GL_UNSIGNED_INT, 0);
