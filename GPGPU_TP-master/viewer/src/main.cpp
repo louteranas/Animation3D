@@ -164,7 +164,7 @@ int main( int argc, char* argv[] )
     // Embedding a QWindow in a QWidget, only way to combine it with widgets
     QWidget * container = QWidget::createWindowContainer(window);
 
-    container->setMinimumSize(1024, 768);
+    container->setMinimumSize(640, 480);
     container->setFocusPolicy(Qt::TabFocus);
 
     // Menu bar to be shared between all windows.

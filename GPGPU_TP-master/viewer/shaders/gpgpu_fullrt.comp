@@ -16,6 +16,8 @@ uniform float radius;
 uniform float groundDistance;
 uniform vec3 center;
 uniform bool blinnPhong;
+uniform bool transparent;
+
 
 #define MAX_SCENE_BOUNDS    10.0
 #define EPS                 0.000001
@@ -167,28 +169,6 @@ vec4 computeSpecularLighting(in vec4 vertColor, in vec4 normal, in vec4 lightVec
     return specularLighting; 
 }
 
-/* compute color from plane */
-vec4 getColorFromPlane(in vec4 direction){
-    // the env map is like an infinite sphere arround the world
-    // so the first thing to do is to transform the direction coords into 
-    //sheprique coords, then we know that thi is in -pi, pi 
-    //and Theta between 0 ans 2*Pi, so we transform this to get a value between 0 and 1 
-    // in order to be able to use the function Texture 2D that return the frag color coresponding
-    //point of the ray's impact with the env Map
-    vec2 coord2D; // our interpolated coords between 0 and 1  
-    float thi; // the angle between the X axis and the direction vector's pro111jection on the plane XY
-    float theta; // the angle between the Z axis and the direction vector 
-    // 
-    float scalar = dot(normalize(direction.xyz), vec3(0, -1, 0));
-    theta = acos(scalar); // we change the direction of the vector to not get a flipped reflection
-    thi = atan(direction.x, direction.z); 
-    coord2D.x = 0.5 + thi/(2*M_PI); // projection on the interval 0-1
-    coord2D.y = theta/M_PI; // projection on the interval 0-1
-
-    return texture2D(colorTexture,coord2D);
-}
-
-
 bool intersectBoundingBox(vec4 origin, vec4 dir) {
     /* check intersection between each plan: 
                 x*-orig.x = dir.x*(distance plan)
@@ -315,12 +295,15 @@ vec4 interpolateColor(hitinfo_t h)
 bool rayPlaneIntersect(in vec4 start, in vec4 u, out hitinfo_t h){
     h.plan = false;
     // define the plane
-    vec4 Q = vec4(0,-groundDistance,0,1);
-    vec4 n = vec4(0,1,0,0);
+    vec4 Q = vec4(0, -groundDistance,0,1);
+    vec4 n = vec4(0,1,0,1);
 
     // compute intersection
-    vec4 PQ = Q-start;
+    vec4 PQ = (Q-start);
     float lambda = (dot(PQ,n)/dot(u,n));
+    if(dot(u,n)>0){
+        lambda = -lambda;
+    }
     if(dot(u,n)>EPS){
         return false;
     }
@@ -382,12 +365,12 @@ bool inShadow(hitinfo_t startPoint){
 vec4 trace(vec4 origin, vec4 dir)
 {
     vec4 resultColor;
-    const int limit = 20;
+    const int limit = 3;
     intersection_t intersectionInfos[limit];
     hitinfo_t h;
     int counter = 0;
-
-    bool intersect = rayPlaneIntersect(origin, dir, h);
+    bool lastHitGround = rayPlaneIntersect(origin, dir, h);
+    bool intersect = lastHitGround;
     if(!intersect){
         intersect = isIntersected(origin, dir, h); 
     }
@@ -399,13 +382,13 @@ vec4 trace(vec4 origin, vec4 dir)
         intersectionInfos[counter].Direction = eyeVector;
         
         // color
-        if(h.plan){
+        if(lastHitGround){
             vertColor = texture2D(colorTexture,h.t.xz/100.);
-            vertNormal = vec4(0,1,0,0);
+            vertNormal = vec4(0,1,0,1);
             h.hit_vptr = -1;
         } else {
             vertColor = interpolateColor(h);
-            vertNormal = interpolateNormal(h);;
+            vertNormal = interpolateNormal(h);
         }
         
         intersectionInfos[counter].Normals = vertNormal;
@@ -418,32 +401,40 @@ vec4 trace(vec4 origin, vec4 dir)
             // diffuse lighting
             vec4 diffuseLighting = computeDiffuseLighting(vertColor, vertNormal, lightVector);
             // specular lighting
-            vec4 specularLighting = computeSpecularLighting(vertColor, vertNormal,lightVector, eyeVector);
-            intersectionInfos[counter].Colors = ambientLighting + diffuseLighting + specularLighting;
+            // vec4 specularLighting = computeSpecularLighting(vertColor, vertNormal,lightVector, eyeVector);
+            intersectionInfos[counter].Colors = ambientLighting + diffuseLighting; //+ specularLighting;
         }
         // compute fresnel coeff
-        float cosThethaD = dot(vertNormal, -1.*dir);
+        float cosThethaD = dot(vertNormal, -1*dir);
         float F = fresnelCoeff(cosThethaD, eta);
         intersectionInfos[counter].Fresnel = F;
 
-        // if(dot(dir,vertNormal)<0.){
-        //     intersectionInfos[counter].Colors = vec4(0.,0.,0.,1.);
-        // }
+        if(dot(dir,vertNormal)>0.){
+            intersectionInfos[counter].Colors = vec4(0.,0.,0.,1.);
+        }
         // new origin
         origin = h.t;
-        dir = normalize(reflect(-1.*dir,vertNormal));
+        dir = normalize(reflect(dir,vertNormal));
         h.plan = false;
-        intersect = rayPlaneIntersect(origin, dir, h);
-        if(!intersect){
-            intersect = isIntersected(origin, dir, h); 
+        if(lastHitGround){
+            intersect = isIntersected(origin, dir, h);
+            lastHitGround = false;
         }
+        else{
+            intersect = rayPlaneIntersect(origin, dir, h);
+            lastHitGround = intersect;
+            if(!intersect){
+                intersect = isIntersected(origin, dir, h); 
+            }
+        }
+        
         counter += 1;
     }
 
 
     /* 3) COMPUTE RESULT COLOR */
     // base: black
-    resultColor = vec4(128, 128, 128, 1)/255.;
+    resultColor = vec4(0,0,0,1);//vec4(128, 128, 128, 1)/255.;
     
     // if one bound at least
     if(counter != 0){
@@ -453,6 +444,9 @@ vec4 trace(vec4 origin, vec4 dir)
             // color = F(j)*color_next + color(j)
             resultColor =  (intersectionInfos[j].Fresnel)*resultColor + intersectionInfos[j].Colors;
         }
+    }
+    else{
+        resultColor = vec4(128, 128, 128, 1)/255.;
     }
     return resultColor;
 	
