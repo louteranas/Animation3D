@@ -41,6 +41,7 @@ public slots:
     QWidget* makeAuxWindow();
     void setWindowSize(const QString& size);
     void setShader(const QString& size);
+    void setShaderLater(const QString& size);
     void cookTorranceClicked();
     void blinnPhongClicked();
     void transparentClicked();

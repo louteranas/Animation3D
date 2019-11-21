@@ -759,6 +759,47 @@ void glShaderWindow::setShader(const QString& shader)
     renderNow();
 }
 
+void glShaderWindow::setShaderLater(const QString& shader)
+{
+    precShader = shader;
+    numBounds = 4;
+    // Prepare a complete shader program...
+	QString shaderPath = workingDirectory + "../shaders/";
+    QDir shadersDir = QDir(shaderPath);
+    QString shader2 = shader + "*";
+    QStringList shaders = shadersDir.entryList(QStringList(shader2));
+    QString vertexShader;
+    QString fragmentShader;
+    QString computeShader;
+    isGPGPU = shader.contains("gpgpu", Qt::CaseInsensitive);
+    foreach (const QString &str, shaders) {
+        QString suffix = str.right(str.size() - str.lastIndexOf("."));
+        if (m_vertShaderSuffix.filter(suffix).size() > 0) {
+            vertexShader = shaderPath + str;
+        }
+        if (m_fragShaderSuffix.filter(suffix).size() > 0) {
+            fragmentShader = shaderPath + str;
+        }
+        if (m_compShaderSuffix.filter(suffix).size() > 0) {
+            computeShader = shaderPath + str;
+        }
+    }
+    m_program = prepareShaderProgram(vertexShader, fragmentShader);
+    if (computeShader.length() > 0) {
+    	compute_program = prepareComputeProgram(computeShader);
+        if (compute_program) createSSBO();
+	} else if (compute_program) {
+        compute_program->release();
+        delete compute_program;
+        compute_program = 0;
+        hasComputeShaders = false;
+        // TODO: release SSBO
+    }
+    bindSceneToProgram();
+    loadTexturesForShaders();
+    renderLater();
+}
+
 void glShaderWindow::loadTexturesForShaders() {
     m_program->bind();
     // Erase all existing textures:
@@ -1054,7 +1095,6 @@ void glShaderWindow::wheelEvent(QWheelEvent * ev)
         QString precShaderTemp = precShader;
         setShader(shader);
         precShader = precShaderTemp;
-        numBounds = 1;
     }
     if(precShader == "2_phong" && !transparent){
         isMoving = true;
@@ -1089,6 +1129,7 @@ void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
         // if there is no button, we just take the last shader (only if it has moved before)
         if(isMoving && !transparent){
             setShader(precShader);
+            //setShaderLater(precShader);
             //glActiveTexture(GL_TEXTURE0);
             // the shader wants a texture. We load one.
             // if (texture) {
@@ -1112,7 +1153,6 @@ void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
         QString precShaderTemp = precShader;
         setShader(shader);
         precShader = precShaderTemp;
-        numBounds = 1;
     }
     if(precShader == "2_phong" && !transparent){
         isMoving = true;
