@@ -25,10 +25,17 @@ uniform vec3 lightPosition;
 uniform bool transparent;
 uniform float eta;
 
+uniform int numBounds;
 in vec4 position;
 in vec4 vertColor;
 
 out vec4 fragColor;
+
+
+
+#define EPS                 0.000001
+
+#define limit               10
 
 /****************************************************************************************************************************************************/
 /*********************************************************** DEFINE OTHER SPHERES *******************************************************************/
@@ -108,7 +115,7 @@ vec4 getColorFromEnvironnement(in vec3 direction){
 **/
 float fresnelCoeff(float cosThethaD, float etaN){
      // Ci coeff 
-     float Ci = pow(max(0, (pow(etaN, 2) - (1 - pow(cosThethaD, 2)))), 0.5);
+     float Ci = pow(max(EPS, (pow(etaN, 2) - (1 - pow(cosThethaD, 2)))), 0.5);
      // Fs coef
      float fracFs = (cosThethaD - Ci) / (cosThethaD + Ci);
      float Fs = pow(abs(fracFs), 2);
@@ -147,7 +154,7 @@ vec4 computeDiffuseLighting(in vec4 vColor,in vec4 vertNormal, in vec4 lightVect
     // Diffuse reflection param 
     float Kd = 0.7;
     // setting the Diffuse lighting - Cd
-    diffuseLighting = Kd * vColor * lightIntensity * max(0, dot(vertNormal, lightVector));
+    diffuseLighting = Kd * vColor * lightIntensity * max(EPS, dot(vertNormal, lightVector));
     return diffuseLighting;
 }
 
@@ -189,7 +196,7 @@ float GGXDistrib(float cosTheta, float alpha){
 * For more details about the variable names, check the TP page
 **/
 vec4 specularLightingBP(in vec4 vColor,float cosThethaD, vec4 halfVector, vec4 normal){
-    return fresnelCoeff(cosThethaD,eta) * vColor * pow(max(0, dot(normal, halfVector)), shininess) * lightIntensity;
+    return fresnelCoeff(cosThethaD,eta) * vColor * pow(max(EPS, dot(normal, halfVector)), shininess) * lightIntensity;
 }
 
 /**
@@ -392,15 +399,13 @@ vec4 computeResultColor(vec3 u, vec3 eye){
     /* 1) INIT STACKS */
     // limit for number of bounds
     
-    
-    const int limit = 100;
     intersection_t intersectionInfos[limit];
     int counter = 0;
 
     // 2) FOLLOW THE RAY 
     // until it reaches the limit or it leaves the scene
     bool intersectSphere = raySphereIntersect(eye, u, indexSphere,intersection,normal);
-    while(counter < limit && intersectSphere){
+    while(counter < min(limit, max(1,numBounds)) && intersectSphere){
         // update information about the intersection, normal, color and incoming direction
         intersectionInfos[counter].Intersections.xyz = intersection.xyz;
         intersectionInfos[counter].Normals.xyz = normal.xyz;

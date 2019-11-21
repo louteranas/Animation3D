@@ -372,7 +372,7 @@ QWidget *glShaderWindow::makeAuxWindow()
     connect(numBoundslider,SIGNAL(valueChanged(int)),this,SLOT(updateNumberOfBounds(int)));
     QLabel* numBoundsLabel = new QLabel("Number of Bounds = ");
     QLabel* numBoundsLabelValue = new QLabel();
-    numBoundsLabelValue->setNum(numBounds);
+    numBoundsLabelValue->setNum(numBounds-1);
     connect(numBoundslider,SIGNAL(valueChanged(int)),numBoundsLabelValue,SLOT(setNum(int)));
     QHBoxLayout *hboxBounds = new QHBoxLayout;
     hboxBounds->addWidget(numBoundsLabel);
@@ -1062,7 +1062,6 @@ void glShaderWindow::wheelEvent(QWheelEvent * ev)
         QString precShaderTemp = precShader;
         setShader(shader);
         precShader = precShaderTemp;
-        numBounds = 1;
     }
 
     int matrixMoving = 0;
@@ -1100,7 +1099,6 @@ void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
             // }
             isMoving = false;
         }
-        numBounds = 1;
 
         return;
     }
@@ -1122,7 +1120,6 @@ void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
         QString precShaderTemp = precShader;
         setShader(shader);
         precShader = precShaderTemp;
-        numBounds = 1;
     }
 
 
@@ -1294,6 +1291,7 @@ void glShaderWindow::render()
     m_program->setUniformValue("lightIntensity", lightIntensity);
     m_program->setUniformValue("shininess", shininess);
     m_program->setUniformValue("eta", eta);
+    m_program->setUniformValue("numBounds", numBounds);
     m_program->setUniformValue("etaComplex", etaComplex);
     m_program->setUniformValue("radius", modelMesh->bsphere.r);
 	if (m_program->uniformLocation("colorTexture") != -1) m_program->setUniformValue("colorTexture", 0);

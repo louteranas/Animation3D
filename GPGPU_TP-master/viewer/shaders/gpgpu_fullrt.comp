@@ -62,7 +62,7 @@ layout (std430, binding = 4) buffer Meshes
 
 float fresnelCoeff(float cosThethaD, float etaN){
      // Ci coeff 
-     float Ci = pow(max(0, (pow(etaN, 2) - (1 - pow(cosThethaD, 2)))), 0.5);
+     float Ci = pow(max(EPS, (pow(etaN, 2) - (1 - pow(cosThethaD, 2)))), 0.5);
      // Fs coef
      float fracFs = (cosThethaD - Ci) / (cosThethaD + Ci);
      float Fs = pow(abs(fracFs), 2);
@@ -92,7 +92,7 @@ vec4 computeDiffuseLighting(in vec4 vertColor, in vec4 vertNormal, in vec4 light
     // Diffuse reflection param 
     float Kd = 0.7;
     // setting the Diffuse lighting - Cd
-    diffuseLighting = Kd * vertColor * lightIntensity * max(0, dot(vertNormal, lightVector));
+    diffuseLighting = Kd * vertColor * lightIntensity * max(EPS, dot(vertNormal, lightVector));
     return diffuseLighting;
 }
 
@@ -134,7 +134,7 @@ float GGXDistrib(float cosTheta, float alpha){
 * For more details about the variable names, check the TP page
 **/
 vec4 specularLightingBP(in vec4 vertColor, float cosThethaD, vec4 halfVector, vec4 normal){
-    return fresnelCoeff(cosThethaD,eta) * vertColor * pow(max(0, dot(normal, halfVector)), shininess) * lightIntensity;
+    return fresnelCoeff(cosThethaD,eta) * vertColor * pow(max(EPS, dot(normal, halfVector)), shininess) * lightIntensity;
 }
 
 /**
@@ -374,7 +374,7 @@ vec4 trace(vec4 origin, vec4 dir)
     if(!intersect){
         intersect = isIntersected(origin, dir, h); 
     }
-    while (counter < min(limit, numBounds) && intersect){
+    while (counter < min(limit, max(1,numBounds)) && intersect){
         // update information
         vec4 vertNormal;
         vec4 vertColor;
