@@ -82,6 +82,8 @@ private:
     QString  envMapName;
     trimesh::TriMesh* modelMesh;
     uchar* pixels;
+    QString precShader;
+    bool isMoving;
     // Ground
     trimesh::point *g_vertices;
     trimesh::vec *g_normals;
@@ -109,6 +111,7 @@ private:
     float shininess;
     float lightDistance;
     float groundDistance;
+    int numBounds;
 
 
     // OpenGL variables encapsulated by Qt

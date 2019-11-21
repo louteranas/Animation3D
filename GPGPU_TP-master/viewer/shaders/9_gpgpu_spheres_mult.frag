@@ -46,7 +46,7 @@ const int numberOfSpheres = 5;
 // centers
 vec3 centers[numberOfSpheres] = vec3[](
     vec3(center.x, center.y, center.z),
-    vec3(center.x, center.y-(100010+radius), center.z),
+    vec3(center.x, center.y-(100200+radius), center.z),
     vec3(center.x-2*radius, center.y-2*radius, center.z-2*radius),
     vec3(center.x-2*radius, center.y+2*radius, center.z+2*radius),
     vec3(center.x-2*radius, center.y+2*radius, center.z-2*radius)

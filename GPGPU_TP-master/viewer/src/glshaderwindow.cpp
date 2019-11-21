@@ -33,7 +33,7 @@ glShaderWindow::glShaderWindow(QWindow *parent)
       environmentMap(0), texture(0), permTexture(0), pixels(0), mouseButton(Qt::NoButton), auxWidget(0),
       isGPGPU(false), hasComputeShaders(false), blinnPhong(true), transparent(true), eta(1.5), etaComplex(0.0), lightIntensity(1.0f), shininess(50.0f), lightDistance(5.0f), groundDistance(0.78),
       shadowMap_fboId(0), shadowMap_rboId(0), shadowMap_textureId(0), fullScreenSnapshots(false), computeResult(0), 
-      m_indexBuffer(QOpenGLBuffer::IndexBuffer), ground_indexBuffer(QOpenGLBuffer::IndexBuffer)
+      m_indexBuffer(QOpenGLBuffer::IndexBuffer), ground_indexBuffer(QOpenGLBuffer::IndexBuffer), precShader(""), isMoving(false), numBounds(4)
 {
     // Default values you might want to tinker with
     shadowMapDimension = 2048;
@@ -697,6 +697,8 @@ void glShaderWindow::setWindowSize(const QString& size)
 
 void glShaderWindow::setShader(const QString& shader)
 {
+    precShader = shader;
+
     // Prepare a complete shader program...
 	QString shaderPath = workingDirectory + "../shaders/";
     QDir shadersDir = QDir(shaderPath);
@@ -876,6 +878,8 @@ void glShaderWindow::initialize()
     }
 	QString shaderPath = workingDirectory + "../shaders/";
     m_program = prepareShaderProgram(shaderPath + "1_simple.vert", shaderPath + "1_simple.frag");
+    precShader = "1_simple";
+
     if (ground_program) {
         ground_program->release();
         delete(ground_program);
@@ -1017,6 +1021,27 @@ void glShaderWindow::mousePressEvent(QMouseEvent *e)
 
 void glShaderWindow::wheelEvent(QWheelEvent * ev)
 {
+    // INTERACTIVITY
+    // when the mouse is wheeling, we just take the phong shader to have a better speed
+    // we keep in memory the last shader
+    // Pay attention to not do that when the last shader is concerning the spheres
+    if(precShader == "gpgpu_fullrt"){
+        isMoving = true;
+        QString shader = "2_phong";
+        QString precShaderTemp = precShader;
+        setShader(shader);
+        precShader = precShaderTemp;
+        // numBounds = 1;
+    }
+    if(precShader == "2_phong"){
+        isMoving = true;
+        QString shader = "1_simple";
+        QString precShaderTemp = precShader;
+        setShader(shader);
+        precShader = precShaderTemp;
+        //numBounds = 1;
+    }
+
     int matrixMoving = 0;
     if (ev->modifiers() & Qt::ShiftModifier) matrixMoving = 1;
     else if (ev->modifiers() & Qt::AltModifier) matrixMoving = 2;
@@ -1035,8 +1060,40 @@ void glShaderWindow::wheelEvent(QWheelEvent * ev)
 }
 
 void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
-{
-    if (mouseButton == Qt::NoButton) return;
+{   
+    // INTERACTIVITY
+    // when the mouse is moving
+    if (mouseButton == Qt::NoButton){
+        // if there is no button, we just take the last shader (only if it has moved before)
+        if(isMoving){
+            setShader(precShader);
+            isMoving = false;
+        }
+        //numBounds = 4;
+        return;
+    }
+
+    // else, we take the phong model to increase the speed of rendering
+    // memorizing the last shader used
+    // Pay attention to do that only when the last shader is the compute shader
+    if(precShader == "gpgpu_fullrt"){
+        isMoving = true;
+        QString shader = "2_phong";
+        QString precShaderTemp = precShader;
+        setShader(shader);
+        precShader = precShaderTemp;
+        //numBounds = 0;
+    }
+    if(precShader == "2_phong"){
+        isMoving = true;
+        QString shader = "1_simple";
+        QString precShaderTemp = precShader;
+        setShader(shader);
+        precShader = precShaderTemp;
+        //numBounds = 1;
+    }
+
+
     QVector2D mousePosition = (2.0/m_screenSize) * (QVector2D(e->localPos()) - QVector2D(0.5 * width(), 0.5*height()));
     QVector3D currTBPosition;
     mouseToTrackball(mousePosition, currTBPosition);
@@ -1078,6 +1135,7 @@ void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
 void glShaderWindow::mouseReleaseEvent(QMouseEvent *e)
 {
     mouseButton = Qt::NoButton;
+    
 }
 
 void glShaderWindow::timerEvent(QTimerEvent *e)
@@ -1128,6 +1186,7 @@ void glShaderWindow::render()
         compute_program->setUniformValue("center", m_center);
         compute_program->setUniformValue("radius", modelMesh->bsphere.r);
         compute_program->setUniformValue("groundDistance", groundDistance * modelMesh->bsphere.r - m_center[1]);
+        compute_program->setUniformValue("numBounds", numBounds);
         compute_program->setUniformValue("mat_inverse", mat_inverse);
         compute_program->setUniformValue("persp_inverse", persp_inverse);
         compute_program->setUniformValue("lightPosition", lightPosition);
@@ -1217,8 +1276,8 @@ void glShaderWindow::render()
     m_vao.bind();
     glDrawElements(GL_TRIANGLES, 3 * m_numFaces, GL_UNSIGNED_INT, 0);
     m_vao.release();
-    m_program->release();
-
+    m_program->release(); 
+    
     if (!isGPGPU) {
         // also draw the ground, with a different shader program
         ground_program->bind();

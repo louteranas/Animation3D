@@ -17,7 +17,7 @@ uniform float groundDistance;
 uniform vec3 center;
 uniform bool blinnPhong;
 uniform bool transparent;
-
+uniform int numBounds;
 
 #define MAX_SCENE_BOUNDS    10.0
 #define EPS                 0.000001
@@ -365,7 +365,7 @@ bool inShadow(hitinfo_t startPoint){
 vec4 trace(vec4 origin, vec4 dir)
 {
     vec4 resultColor;
-    const int limit = 3;
+    const int limit = 4;
     intersection_t intersectionInfos[limit];
     hitinfo_t h;
     int counter = 0;
@@ -401,8 +401,8 @@ vec4 trace(vec4 origin, vec4 dir)
             // diffuse lighting
             vec4 diffuseLighting = computeDiffuseLighting(vertColor, vertNormal, lightVector);
             // specular lighting
-            // vec4 specularLighting = computeSpecularLighting(vertColor, vertNormal,lightVector, eyeVector);
-            intersectionInfos[counter].Colors = ambientLighting + diffuseLighting; //+ specularLighting;
+            vec4 specularLighting = computeSpecularLighting(vertColor, vertNormal,lightVector, eyeVector);
+            intersectionInfos[counter].Colors = ambientLighting + diffuseLighting + specularLighting;
         }
         // compute fresnel coeff
         float cosThethaD = dot(vertNormal, -1*dir);
