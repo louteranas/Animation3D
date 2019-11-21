@@ -16,6 +16,8 @@ in vec4 lightSpace;
 
 out vec4 fragColor;
 
+
+#define EPS                 0.000001
 /**
 * this fuction calculate the Fresnet Coefficient when eta is complexe
 * For more details about the variable names, check the TP page
@@ -50,7 +52,7 @@ float fresnetCoeffCmp(float cosThethaD){
 **/
 float fresnetCoeffRl(float cosThethaD){
      // Ci coeff 
-     float Ci = pow((pow(eta, 2) - (1 - pow(cosThethaD, 2))), 0.5);
+     float Ci = pow(max(EPS,(pow(eta, 2) - (1 - pow(cosThethaD, 2)))), 0.5);
      // Fs coef
      float fracFs = (cosThethaD - Ci) / (cosThethaD + Ci);
      float Fs = pow(abs(fracFs), 2);
@@ -101,9 +103,9 @@ float GGXDistrib(float cosTheta, float alpha){
 **/
 vec4 specularLightingBP(float cosThethaD, vec4 halfVector){
      if(etaComplex > 0.1)
-          return fresnetCoeffCmp(cosThethaD) * vertColor * pow(max(0, dot(vertNormal, halfVector)), shininess) * lightIntensity;
+          return fresnetCoeffCmp(cosThethaD) * vertColor * pow(max(EPS, dot(vertNormal, halfVector)), shininess) * lightIntensity;
      else
-          return fresnetCoeffRl(cosThethaD) * vertColor * pow(max(0, dot(vertNormal, halfVector)), shininess) * lightIntensity;
+          return fresnetCoeffRl(cosThethaD) * vertColor * pow(max(EPS, dot(vertNormal, halfVector)), shininess) * lightIntensity;
 }
 
 /**
@@ -150,7 +152,7 @@ void main( void )
      // Diffuse reflection param 
      float Kd = 0.7;
      // setting the Diffuse lighting - Cd
-     vec4 diffuseLighting = Kd * vertColor * lightIntensity * max(0, dot(vertNormal, lightVector));
+     vec4 diffuseLighting = Kd * vertColor * lightIntensity * max(EPS, dot(vertNormal, lightVector));
      
      
      /********** Specular light setup *********/

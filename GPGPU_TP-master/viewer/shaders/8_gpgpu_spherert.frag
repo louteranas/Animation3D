@@ -6,7 +6,7 @@ uniform mat4 persp_inverse;
 uniform sampler2D envMap;
 uniform vec3 center;
 uniform float radius;
-
+uniform int numBounds;
 uniform bool transparent;
 uniform float shininess;
 uniform float eta;
@@ -14,6 +14,9 @@ uniform float eta;
 in vec4 position;
 
 out vec4 fragColor;
+
+
+#define EPS                 0.000001
 
 /* compute the color of the pixel of impact between the ray and the env Map*/
 vec4 getColorFromEnvironment(in vec3 direction)
@@ -80,7 +83,7 @@ float getCosThetha(vec3 intersection, vec3 u, bool inside){
 
 float fresnelCoeff(float cosThethaD, float etaN){
      // Ci coeff 
-     float Ci = pow(max(0, (pow(etaN, 2) - (1 - pow(cosThethaD, 2)))), 0.5);
+     float Ci = pow(max(EPS, (pow(etaN, 2) - (1 - pow(cosThethaD, 2)))), 0.5);
      // Fs coef
      float fracFs = (cosThethaD - Ci) / (cosThethaD + Ci);
      float Fs = pow(abs(fracFs), 2);
@@ -168,6 +171,6 @@ void main(void)
 
     // Step 3: compute frag color
     // n = number of rebounds
-    int n = 1;
+    int n = numBounds;
     fragColor = computeResultColor(u, eye, n);
 }
