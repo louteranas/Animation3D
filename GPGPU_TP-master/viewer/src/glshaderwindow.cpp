@@ -205,6 +205,12 @@ void glShaderWindow::updateLightIntensity(int lightSliderValue)
     renderNow();
 }
 
+void glShaderWindow::updateNumberOfBounds(int numBoundsSliderValue)
+{
+    numBounds = numBoundsSliderValue;
+    renderNow();
+}
+
 void glShaderWindow::updateShininess(int shininessSliderValue)
 {
     shininess = shininessSliderValue;
@@ -339,23 +345,40 @@ QWidget *glShaderWindow::makeAuxWindow()
     outer->addLayout(hboxEta);
     outer->addWidget(etaSlider);
 
-    // Eta complex slider
-    QSlider* etaComplexSlider = new QSlider(Qt::Horizontal);
-    etaComplexSlider->setTickPosition(QSlider::TicksBelow);
-    etaComplexSlider->setTickInterval(100);
-    etaComplexSlider->setMinimum(0);
-    etaComplexSlider->setMaximum(500);
-    etaComplexSlider->setSliderPosition(etaComplex*100);
-    connect(etaComplexSlider,SIGNAL(valueChanged(int)),this,SLOT(updateEtaComplex(int)));
-    QLabel* etaComplexLabel = new QLabel("Eta (index of refraction) (complex) * 100 =");
-    QLabel* etaComplexLabelValue = new QLabel();
-    etaComplexLabelValue->setNum(etaComplex * 100);
-    connect(etaComplexSlider,SIGNAL(valueChanged(int)),etaComplexLabelValue,SLOT(setNum(int)));
-    QHBoxLayout *hboxEtaComplex= new QHBoxLayout;
-    hboxEtaComplex->addWidget(etaComplexLabel);
-    hboxEtaComplex->addWidget(etaComplexLabelValue);
-    outer->addLayout(hboxEtaComplex);
-    outer->addWidget(etaComplexSlider);
+    // // Eta complex slider
+    // QSlider* etaComplexSlider = new QSlider(Qt::Horizontal);
+    // etaComplexSlider->setTickPosition(QSlider::TicksBelow);
+    // etaComplexSlider->setTickInterval(100);
+    // etaComplexSlider->setMinimum(0);
+    // etaComplexSlider->setMaximum(500);
+    // etaComplexSlider->setSliderPosition(etaComplex*100);
+    // connect(etaComplexSlider,SIGNAL(valueChanged(int)),this,SLOT(updateEtaComplex(int)));
+    // QLabel* etaComplexLabel = new QLabel("Eta (index of refraction) (complex) * 100 =");
+    // QLabel* etaComplexLabelValue = new QLabel();
+    // etaComplexLabelValue->setNum(etaComplex * 100);
+    // connect(etaComplexSlider,SIGNAL(valueChanged(int)),etaComplexLabelValue,SLOT(setNum(int)));
+    // QHBoxLayout *hboxEtaComplex= new QHBoxLayout;
+    // hboxEtaComplex->addWidget(etaComplexLabel);
+    // hboxEtaComplex->addWidget(etaComplexLabelValue);
+    // outer->addLayout(hboxEtaComplex);
+    // outer->addWidget(etaComplexSlider);
+
+    // numBounds
+    QSlider* numBoundslider = new QSlider(Qt::Horizontal);
+    numBoundslider->setTickPosition(QSlider::TicksBelow);
+    numBoundslider->setMinimum(1);
+    numBoundslider->setMaximum(10);
+    numBoundslider->setSliderPosition(numBounds);
+    connect(numBoundslider,SIGNAL(valueChanged(int)),this,SLOT(updateNumberOfBounds(int)));
+    QLabel* numBoundsLabel = new QLabel("Number of Bounds = ");
+    QLabel* numBoundsLabelValue = new QLabel();
+    numBoundsLabelValue->setNum(numBounds);
+    connect(numBoundslider,SIGNAL(valueChanged(int)),numBoundsLabelValue,SLOT(setNum(int)));
+    QHBoxLayout *hboxBounds = new QHBoxLayout;
+    hboxBounds->addWidget(numBoundsLabel);
+    hboxBounds->addWidget(numBoundsLabelValue);
+    outer->addLayout(hboxBounds);
+    outer->addWidget(numBoundslider);
 
     auxWidget->setLayout(outer);
     return auxWidget;

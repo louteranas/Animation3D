@@ -46,6 +46,7 @@ public slots:
     void transparentClicked();
     void opaqueClicked();
     void updateLightIntensity(int lightSliderValue);
+    void updateNumberOfBounds(int numBoundsSliderValue);
     void updateShininess(int shininessSliderValue);
     void updateEta(int etaSliderValue);
     void updateEtaComplex(int etaComplexSliderValue);
