@@ -33,7 +33,7 @@ glShaderWindow::glShaderWindow(QWindow *parent)
       environmentMap(0), texture(0), permTexture(0), pixels(0), mouseButton(Qt::NoButton), auxWidget(0),
       isGPGPU(false), hasComputeShaders(false), blinnPhong(true), transparent(true), eta(1.5), etaComplex(0.0), lightIntensity(1.0f), shininess(50.0f), lightDistance(5.0f), groundDistance(0.78),
       shadowMap_fboId(0), shadowMap_rboId(0), shadowMap_textureId(0), fullScreenSnapshots(false), computeResult(0), 
-      m_indexBuffer(QOpenGLBuffer::IndexBuffer), ground_indexBuffer(QOpenGLBuffer::IndexBuffer), precShader(""), isMoving(false), numBounds(4)
+      m_indexBuffer(QOpenGLBuffer::IndexBuffer), ground_indexBuffer(QOpenGLBuffer::IndexBuffer), precShader(""), isMoving(false), numBounds(1)
 {
     // Default values you might want to tinker with
     shadowMapDimension = 2048;
@@ -1031,7 +1031,7 @@ void glShaderWindow::wheelEvent(QWheelEvent * ev)
         QString precShaderTemp = precShader;
         setShader(shader);
         precShader = precShaderTemp;
-        // numBounds = 1;
+        numBounds = 1;
     }
     if(precShader == "2_phong" && !transparent){
         isMoving = true;
@@ -1039,7 +1039,7 @@ void glShaderWindow::wheelEvent(QWheelEvent * ev)
         QString precShaderTemp = precShader;
         setShader(shader);
         precShader = precShaderTemp;
-        //numBounds = 1;
+        numBounds = 1;
     }
 
     int matrixMoving = 0;
@@ -1077,7 +1077,7 @@ void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
             // }
             isMoving = false;
         }
-        //numBounds = 4;
+        numBounds = 1;
 
         return;
     }
@@ -1091,7 +1091,7 @@ void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
         QString precShaderTemp = precShader;
         setShader(shader);
         precShader = precShaderTemp;
-        //numBounds = 0;
+        numBounds = 1;
     }
     if(precShader == "2_phong" && !transparent){
         isMoving = true;
@@ -1099,7 +1099,7 @@ void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
         QString precShaderTemp = precShader;
         setShader(shader);
         precShader = precShaderTemp;
-        //numBounds = 1;
+        numBounds = 1;
     }
 
 

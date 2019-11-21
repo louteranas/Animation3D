@@ -19,6 +19,7 @@ uniform bool blinnPhong;
 uniform bool transparent;
 uniform int numBounds;
 
+#define limit 5
 #define MAX_SCENE_BOUNDS    10.0
 #define EPS                 0.000001
 
@@ -365,7 +366,6 @@ bool inShadow(hitinfo_t startPoint){
 vec4 trace(vec4 origin, vec4 dir)
 {
     vec4 resultColor;
-    const int limit = 4;
     intersection_t intersectionInfos[limit];
     hitinfo_t h;
     int counter = 0;
@@ -374,7 +374,7 @@ vec4 trace(vec4 origin, vec4 dir)
     if(!intersect){
         intersect = isIntersected(origin, dir, h); 
     }
-    while (counter < limit && intersect){
+    while (counter < min(limit, numBounds) && intersect){
         // update information
         vec4 vertNormal;
         vec4 vertColor;
