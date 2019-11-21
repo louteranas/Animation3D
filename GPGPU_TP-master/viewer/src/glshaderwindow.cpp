@@ -1251,8 +1251,14 @@ void glShaderWindow::render()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         // set up camera position in light source:
         // TODO_shadowMapping: you must initialize these two matrices.
-        lightCoordMatrix.setToIdentity();
-        lightPerspective.setToIdentity();
+        //lightCoordMatrix.setToIdentity();
+        //lightPerspective.setToIdentity();
+        float near_plane = 1.0f, far_plane = 7.5f;
+        lightCoordMatrix.lookAt(QVector3D(-2.0f, 4.0f, -1.0f), 
+                         QVector3D( 0.0f, 0.0f,  0.0f), 
+                         QVector3D( 0.0f, 1.0f,  0.0f));
+        lightPerspective.perspective(90.0f, 1.0, 1.0, 25.0);
+        
 
         shadowMapGenerationProgram->setUniformValue("matrix", lightCoordMatrix);
         shadowMapGenerationProgram->setUniformValue("perspective", lightPerspective);
