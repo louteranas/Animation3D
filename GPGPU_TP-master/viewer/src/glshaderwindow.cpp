@@ -877,8 +877,8 @@ void glShaderWindow::initialize()
         delete(m_program);
     }
 	QString shaderPath = workingDirectory + "../shaders/";
-    m_program = prepareShaderProgram(shaderPath + "1_simple.vert", shaderPath + "1_simple.frag");
-    precShader = "1_simple";
+    m_program = prepareShaderProgram(shaderPath + "2_phong.vert", shaderPath + "2_phong.frag");
+    precShader = "2_phong";
 
     if (ground_program) {
         ground_program->release();
@@ -1025,7 +1025,7 @@ void glShaderWindow::wheelEvent(QWheelEvent * ev)
     // when the mouse is wheeling, we just take the phong shader to have a better speed
     // we keep in memory the last shader
     // Pay attention to not do that when the last shader is concerning the spheres
-    if(precShader == "gpgpu_fullrt"){
+    if(precShader == "gpgpu_fullrt" && !transparent){
         isMoving = true;
         QString shader = "2_phong";
         QString precShaderTemp = precShader;
@@ -1033,7 +1033,7 @@ void glShaderWindow::wheelEvent(QWheelEvent * ev)
         precShader = precShaderTemp;
         // numBounds = 1;
     }
-    if(precShader == "2_phong"){
+    if(precShader == "2_phong" && !transparent){
         isMoving = true;
         QString shader = "1_simple";
         QString precShaderTemp = precShader;
@@ -1065,18 +1065,27 @@ void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
     // when the mouse is moving
     if (mouseButton == Qt::NoButton){
         // if there is no button, we just take the last shader (only if it has moved before)
-        if(isMoving){
+        if(isMoving && !transparent){
             setShader(precShader);
+            //glActiveTexture(GL_TEXTURE0);
+            // the shader wants a texture. We load one.
+            // if (texture) {
+            //     texture->setWrapMode(QOpenGLTexture::Repeat);
+            //     texture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
+            //     texture->setMagnificationFilter(QOpenGLTexture::Linear);
+            //     texture->bind(0);
+            // }
             isMoving = false;
         }
         //numBounds = 4;
+
         return;
     }
 
     // else, we take the phong model to increase the speed of rendering
     // memorizing the last shader used
     // Pay attention to do that only when the last shader is the compute shader
-    if(precShader == "gpgpu_fullrt"){
+    if(precShader == "gpgpu_fullrt" && !transparent){
         isMoving = true;
         QString shader = "2_phong";
         QString precShaderTemp = precShader;
@@ -1084,7 +1093,7 @@ void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
         precShader = precShaderTemp;
         //numBounds = 0;
     }
-    if(precShader == "2_phong"){
+    if(precShader == "2_phong" && !transparent){
         isMoving = true;
         QString shader = "1_simple";
         QString precShaderTemp = precShader;

@@ -78,7 +78,7 @@ void setupWindowMenu(QMenuBar* myMenuBar, glShaderWindow* glWindow)
     foreach (const QString& sizeName, sizes) {
         QAction* action = setSizeAction->addAction(sizeName);
         action->setCheckable(true);
-        if (sizeName == "1024x768") action->setChecked(true);
+        if (sizeName == "640x480") action->setChecked(true);
         glWindow->connect(action, SIGNAL(triggered()), &sizeMapper, SLOT(map()));
         sizeMapper.setMapping(action, sizeName);
         sizeMenu->addAction(action);

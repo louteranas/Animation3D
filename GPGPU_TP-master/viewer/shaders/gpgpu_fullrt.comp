@@ -416,15 +416,17 @@ vec4 trace(vec4 origin, vec4 dir)
         origin = h.t;
         dir = normalize(reflect(dir,vertNormal));
         h.plan = false;
-        if(lastHitGround){
-            intersect = isIntersected(origin, dir, h);
-            lastHitGround = false;
-        }
-        else{
-            intersect = rayPlaneIntersect(origin, dir, h);
-            lastHitGround = intersect;
-            if(!intersect){
-                intersect = isIntersected(origin, dir, h); 
+        if(counter <limit){
+            if(lastHitGround){
+                intersect = isIntersected(origin, dir, h);
+                lastHitGround = false;
+            }
+            else{
+                intersect = rayPlaneIntersect(origin, dir, h);
+                lastHitGround = intersect;
+                if(!intersect){
+                    intersect = isIntersected(origin, dir, h); 
+                }
             }
         }
         
