@@ -33,7 +33,8 @@ glShaderWindow::glShaderWindow(QWindow *parent)
       environmentMap(0), texture(0), permTexture(0), pixels(0), mouseButton(Qt::NoButton), auxWidget(0),
       isGPGPU(false), hasComputeShaders(false), blinnPhong(true), transparent(true), eta(1.5), etaComplex(0.0), lightIntensity(1.0f), shininess(50.0f), lightDistance(5.0f), groundDistance(0.78),
       shadowMap_fboId(0), shadowMap_rboId(0), shadowMap_textureId(0), fullScreenSnapshots(false), computeResult(0), 
-      m_indexBuffer(QOpenGLBuffer::IndexBuffer), ground_indexBuffer(QOpenGLBuffer::IndexBuffer), precShader(""), isMoving(false), numBounds(1), alternatingRendering(0), interactivityMove(0)
+      m_indexBuffer(QOpenGLBuffer::IndexBuffer), ground_indexBuffer(QOpenGLBuffer::IndexBuffer), precShader(""), isMoving(false), numBounds(1), alternatingRendering(0), interactivityMove(0),
+      precRendering(0)
 {
     // Default values you might want to tinker with
     shadowMapDimension = 2048;
@@ -220,13 +221,15 @@ void glShaderWindow::interactivityMoveAlternatingClicked()
 void glShaderWindow::updateLightIntensity(int lightSliderValue)
 {
     lightIntensity = lightSliderValue / 100.0;
-    renderNow();
+    interactivity();
+    // renderNow();
 }
 
 void glShaderWindow::updateNumberOfBounds(int numBoundsSliderValue)
 {
     numBounds = numBoundsSliderValue;
-    renderNow();
+    interactivity();
+    // renderNow();
 }
 
 void glShaderWindow::updateAlternatingRendering(int alternatingRenderingSliderValue)
@@ -238,13 +241,15 @@ void glShaderWindow::updateAlternatingRendering(int alternatingRenderingSliderVa
 void glShaderWindow::updateShininess(int shininessSliderValue)
 {
     shininess = shininessSliderValue;
-    renderNow();
+    interactivity();
+    // renderNow();
 }
 
 void glShaderWindow::updateEta(int etaSliderValue)
 {
     eta = etaSliderValue/100.0;
-    renderNow();
+    interactivity();
+    // renderNow();
 }
 
 void glShaderWindow::updateEtaComplex(int etaComplexSliderValue)
@@ -1148,27 +1153,7 @@ void glShaderWindow::wheelEvent(QWheelEvent * ev)
     // when the mouse is wheeling, we just take the phong shader to have a better speed
     // we keep in memory the last shader
     // Pay attention to not do that when the last shader is concerning the spheres
-    if(precShader == "gpgpu_fullrt"){
-        if(interactivityMove == 1){
-            isMoving = true;
-            QString shader = "2_phong";
-            QString precShaderTemp = precShader;
-            setShader(shader);
-            precShader = precShaderTemp;
-        }
-        if(interactivityMove == 2){
-            isMoving = true;
-            alternatingRendering = 4;
-        }
-    }
-
-    if(precShader == "2_phong" && interactivityMove == 1){
-        isMoving = true;
-        QString shader = "1_simple";
-        QString precShaderTemp = precShader;
-        setShader(shader);
-        precShader = precShaderTemp;
-    }
+    interactivity();
 
     int matrixMoving = 0;
     if (ev->modifiers() & Qt::ShiftModifier) matrixMoving = 1;
@@ -1192,13 +1177,9 @@ void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
     // INTERACTIVITY
     // when the mouse is moving
     if (mouseButton == Qt::NoButton){
-        // if there is no button, we just take the last shader (only if it has moved before)
+        //if there is no button, we just take the last shader (only if it has moved before)
         if(isMoving){
             if(interactivityMove == 1){
-                setShader(precShader);
-            }
-            if(interactivityMove == 2){
-                alternatingRendering = 1;
                 setShader(precShader);
             }
             isMoving = false;
@@ -1206,31 +1187,7 @@ void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
         return;
     }
 
-    // else, we take the phong model to increase the speed of rendering
-    // memorizing the last shader used
-    // Pay attention to do that only when the last shader is the compute shader
-    if(precShader == "gpgpu_fullrt"){
-        if(interactivityMove == 1){
-            isMoving = true;
-            QString shader = "2_phong";
-            QString precShaderTemp = precShader;
-            setShader(shader);
-            precShader = precShaderTemp;
-        }
-        if(interactivityMove == 2){
-            isMoving = true;
-            alternatingRendering = 4;
-        }
-    }
-
-    if(precShader == "2_phong" && interactivityMove == 1){
-        isMoving = true;
-        QString shader = "1_simple";
-        QString precShaderTemp = precShader;
-        setShader(shader);
-        precShader = precShaderTemp;
-    }
-
+    interactivity();
 
     QVector2D mousePosition = (2.0/m_screenSize) * (QVector2D(e->localPos()) - QVector2D(0.5 * width(), 0.5*height()));
     QVector3D currTBPosition;
@@ -1273,12 +1230,54 @@ void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
 void glShaderWindow::mouseReleaseEvent(QMouseEvent *e)
 {
     mouseButton = Qt::NoButton;
-    
+}
+
+void glShaderWindow::interactivity(){
+    if(precShader == "gpgpu_fullrt"){
+        if(interactivityMove == 2){
+            alternatingRendering = 8;
+            renderNow();
+            if(!timerId.empty()){
+                timerId.clear();
+            }
+            timerId.push_back(startTimer(1000));
+        } else if (interactivityMove == 1) {
+            QString shader = "2_phong";
+            QString precShaderTemp = precShader;
+            setShader(shader);
+            precShader = precShaderTemp;
+        } else {
+            renderNow();
+        }
+    } else if(precShader == "2_phong") {
+        if(interactivityMove == 1){
+            isMoving = true;
+            QString shader = "1_simple";
+            QString precShaderTemp = precShader;
+            setShader(shader);
+            precShader = precShaderTemp;
+        }
+
+    } else {
+        renderNow();
+    }
+
 }
 
 void glShaderWindow::timerEvent(QTimerEvent *e)
 {
-
+    int t = timerId.back();
+    if (e->timerId() == t){
+        // for(int i = alternatingRendering; i >= 0; i--){
+        //     alternatingRendering = i;
+        //     renderNow();
+        //     timerId.push_back(startTimer(100));
+        // }
+        alternatingRendering = precRendering;
+        renderLater();
+        timerId.pop_back();
+        killTimer(t);
+    }
 }
 
 static int nextPower2(int x) {

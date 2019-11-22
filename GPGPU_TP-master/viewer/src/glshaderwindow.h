@@ -14,6 +14,7 @@
 #include <QtGui/QOpenGLFunctions>
 #include <QtGui/QScreen>
 #include <QMouseEvent>
+#include <stack> 
 
 
 class glShaderWindow : public OpenGLWindow
@@ -61,6 +62,7 @@ protected:
     void mousePressEvent(QMouseEvent *e);
     void mouseMoveEvent(QMouseEvent *e);
     void mouseReleaseEvent(QMouseEvent *e);
+    void interactivity();
     void timerEvent(QTimerEvent *e);
     void resizeEvent(QResizeEvent * ev);
     void wheelEvent(QWheelEvent * ev);
@@ -120,6 +122,8 @@ private:
     float groundDistance;
     int numBounds;
     int alternatingRendering;
+    int precRendering;
+    std::vector<int> timerId;
 
 
     // OpenGL variables encapsulated by Qt
