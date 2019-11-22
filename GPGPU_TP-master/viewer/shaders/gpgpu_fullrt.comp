@@ -315,7 +315,7 @@ bool rayPlaneIntersect(in vec4 start, in vec4 u, out float lambda){
     }
 }
 
-bool isIntersected(vec4 origin, vec4 dir, bool traceFloor, out hitinfo_t h)
+bool isIntersected(vec4 origin, vec4 dir, out hitinfo_t h)
 {
     h.plan = false;
     vec4 dist; // stores distance + barycentric coord
@@ -343,7 +343,7 @@ bool isIntersected(vec4 origin, vec4 dir, bool traceFloor, out hitinfo_t h)
             }
 		}
     }
-    if(rayPlaneIntersect(origin, dir, lambdaSol) && traceFloor){
+    if(rayPlaneIntersect(origin, dir, lambdaSol)){
         if((lambdaSol<minLambda || hit == false) && lambdaSol >0.01 ){
             h.t = origin + lambdaSol*dir;
             h.hit_vptr = -1;
@@ -361,7 +361,7 @@ bool inShadow(hitinfo_t startPoint){
     vec4 dir = normalize(-1*vec4(lightPosition - startPoint.t.xyz, 1));
     hitinfo_t newH;
     bool pInShadow = false;
-    if(isIntersected(startPoint.t, dir, true, newH)){
+    if(isIntersected(startPoint.t, dir, newH)){
         if(newH.hit_vptr != startPoint.hit_vptr){
             pInShadow = true;
         }
@@ -376,7 +376,7 @@ vec4 trace(vec4 origin, vec4 dir)
     intersection_t intersectionInfos[limit];
     hitinfo_t h;
     int counter = 0;
-    bool intersect = isIntersected(origin, dir,true, h); 
+    bool intersect = isIntersected(origin, dir, h); 
     while (counter < min(limit, max(1,numBounds)) && intersect){
         // update information
         vec4 vertNormal;
@@ -420,11 +420,11 @@ vec4 trace(vec4 origin, vec4 dir)
         }
         // new origin
         origin = h.t;
-        dir = normalize(reflect(-1*dir,vertNormal));
-        
+        dir = normalize(reflect(dir,vertNormal));
         h.plan = false;
+        // intersectionInfos[counter].Colors = dir;
         if(counter <limit){
-            intersect = isIntersected(origin, dir, false, h); 
+            intersect = isIntersected(origin, dir, h); 
         }
         
         counter += 1;
