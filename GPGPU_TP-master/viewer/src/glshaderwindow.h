@@ -47,6 +47,8 @@ public slots:
     void blinnPhongClicked();
     void transparentClicked();
     void opaqueClicked();
+    void shadowMapClicked();
+    void shadowMapUnusedClicked();
     void interactivityMoveNothingClicked();
     void interactivityMovePhongClicked();
     void interactivityMoveAlternatingClicked();
@@ -124,6 +126,7 @@ private:
     int alternatingRendering;
     int precRendering;
     std::vector<int> timerId;
+    bool shadowMapping;
 
 
     // OpenGL variables encapsulated by Qt

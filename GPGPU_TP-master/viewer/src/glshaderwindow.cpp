@@ -34,7 +34,7 @@ glShaderWindow::glShaderWindow(QWindow *parent)
       isGPGPU(false), hasComputeShaders(false), blinnPhong(true), transparent(true), eta(1.5), etaComplex(0.0), lightIntensity(1.0f), shininess(50.0f), lightDistance(5.0f), groundDistance(0.78),
       shadowMap_fboId(0), shadowMap_rboId(0), shadowMap_textureId(0), fullScreenSnapshots(false), computeResult(0), 
       m_indexBuffer(QOpenGLBuffer::IndexBuffer), ground_indexBuffer(QOpenGLBuffer::IndexBuffer), precShader(""), isMoving(false), numBounds(1), alternatingRendering(0), interactivityMove(0),
-      precRendering(0)
+      precRendering(0), shadowMapping(false)
 {
     // Default values you might want to tinker with
     shadowMapDimension = 2048;
@@ -200,6 +200,18 @@ void glShaderWindow::opaqueClicked()
     renderNow();
 }
 
+void glShaderWindow::shadowMapUnusedClicked()
+{
+    shadowMapping = false;
+    renderNow();
+}
+
+void glShaderWindow::shadowMapClicked()
+{
+    shadowMapping = true;
+    renderNow();
+}
+
 void glShaderWindow::interactivityMoveNothingClicked()
 {
     interactivityMove = 0;
@@ -311,6 +323,19 @@ QWidget *glShaderWindow::makeAuxWindow()
     vbox3->addWidget(mode2);
     groupBox3->setLayout(vbox3);
     buttons->addWidget(groupBox3);
+
+    QGroupBox *groupBox4 = new QGroupBox("Shadow Mapping:");
+    QRadioButton *shadow0 = new QRadioButton("&Nothing");
+    QRadioButton *shadow1 = new QRadioButton("&ShadowMap");
+    if (!shadowMapping) shadow0->setChecked(true);
+    else shadow1->setChecked(true);
+    connect(shadow0, SIGNAL(clicked()), this, SLOT(shadowMapUnusedClicked()));
+    connect(shadow1, SIGNAL(clicked()), this, SLOT(shadowMapClicked()));
+    QVBoxLayout *vbox4 = new QVBoxLayout;
+    vbox4->addWidget(shadow0);
+    vbox4->addWidget(shadow1);
+    groupBox4->setLayout(vbox4);
+    buttons->addWidget(groupBox4);
     
     outer->addLayout(buttons);
 
@@ -1268,13 +1293,13 @@ void glShaderWindow::timerEvent(QTimerEvent *e)
 {
     int t = timerId.back();
     if (e->timerId() == t){
-        // for(int i = alternatingRendering; i >= 0; i--){
-        //     alternatingRendering = i;
-        //     renderNow();
-        //     timerId.push_back(startTimer(100));
-        // }
-        alternatingRendering = precRendering;
-        renderLater();
+        for(int i = alternatingRendering; i >= 1; i-=2){
+            alternatingRendering = i;
+            renderNow();
+            timerId.push_back(startTimer(100));
+        }
+        // alternatingRendering = precRendering;
+        // renderLater();
         timerId.pop_back();
         killTimer(t);
     }
@@ -1369,13 +1394,16 @@ void glShaderWindow::render()
         // TODO_shadowMapping: you must initialize these two matrices.
         //lightCoordMatrix.setToIdentity();
         //lightPerspective.setToIdentity();
-        float near_plane = 1.0f, far_plane = 7.5f;
-        lightCoordMatrix.lookAt(QVector3D(-2.0f, 4.0f, -1.0f), 
-                         QVector3D( 0.0f, 0.0f,  0.0f), 
-                         QVector3D( 0.0f, 1.0f,  0.0f));
+        // float near_plane = 1.0f, far_plane = 25.0f;
+        lightCoordMatrix.lookAt(lightPosition,m_center, QVector3D(0.0,1.0,0.0));
+        lightPerspective.perspective(90, 1,1,25);
+
+        lightCoordMatrix.lookAt(lightPosition, 
+                        lightPosition + QVector3D( 0.0f, -1.0f,  0.0f), 
+                        QVector3D( 0.0f, 1.0f,  0.0f));
+
         lightPerspective.perspective(90.0f, 1.0, 1.0, 25.0);
         
-
         shadowMapGenerationProgram->setUniformValue("matrix", lightCoordMatrix);
         shadowMapGenerationProgram->setUniformValue("perspective", lightPerspective);
         // Draw the entire scene:
@@ -1419,6 +1447,7 @@ void glShaderWindow::render()
     m_program->setUniformValue("numBounds", numBounds);
     m_program->setUniformValue("etaComplex", etaComplex);
     m_program->setUniformValue("radius", modelMesh->bsphere.r);
+    m_program->setUniformValue("shadowMapping", shadowMapping);
 	if (m_program->uniformLocation("colorTexture") != -1) m_program->setUniformValue("colorTexture", 0);
     if (m_program->uniformLocation("envMap") != -1)  m_program->setUniformValue("envMap", 1);
 	else if (m_program->uniformLocation("permTexture") != -1)  m_program->setUniformValue("permTexture", 1);
@@ -1455,8 +1484,9 @@ void glShaderWindow::render()
         if (ground_program->uniformLocation("shadowMap") != -1) {
             ground_program->setUniformValue("shadowMap", 2);
             // TODO_shadowMapping: send the right transform here
-            m_program->setUniformValue("matrixLight", lightCoordMatrix);
-            m_program->setUniformValue("perspectiveLight", lightPerspective);
+            ground_program->setUniformValue("matrixLight", lightCoordMatrix);
+            ground_program->setUniformValue("perspectiveLight", lightPerspective);
+
         }
         ground_vao.bind();
         glDrawElements(GL_TRIANGLES, g_numIndices, GL_UNSIGNED_INT, 0);

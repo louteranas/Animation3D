@@ -7,6 +7,7 @@ uniform float shininess;
 uniform float eta;
 uniform float etaComplex;
 uniform sampler2D shadowMap;
+uniform bool shadowMapping;
 
 in vec4 eyeVector;
 in vec4 lightVector;
@@ -176,22 +177,27 @@ void main( void )
           specularLighting = specularLightingCT(cosThethaD, halfVector, alpha);
 
 
-     /************** 
-     object color is the sum of ambient, specular and diffuse lights with the object base color 
-     ***************/
-     fragColor = ambientLight + diffuseLighting + specularLighting;
+     if(shadowMapping){
+          float depthValue = (texture(shadowMap, lightSpace.xy).z);
+          float distanceLightSource = lightSpace.z;
+
+          if(depthValue < distanceLightSource){
+               fragColor = ambientLight;
+          } else {
+               fragColor = ambientLight + diffuseLighting + specularLighting;
+          }
+     } else {
+          /************** 
+          object color is the sum of ambient, specular and diffuse lights with the object base color 
+          ***************/
+          fragColor = ambientLight + diffuseLighting + specularLighting;
+     }
+
 
      // shadow mapping
      // http://www.opengl-tutorial.org/fr/intermediate-tutorials/tutorial-16-shadow-mapping/
      // https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping
      // https://learnopengl.com/Advanced-Lighting/Shadows/Point-Shadows
 
-     // float depthValue = (texture(shadowMap, lightSpace.xy).z);
-     // float distanceLightSource = lightSpace.z;
      
-     // if(depthValue < distanceLightSource){
-     //      fragColor = ambientLight;
-     // } else {
-     //      fragColor = ambientLight + diffuseLighting + specularLighting;
-     // }
 }
