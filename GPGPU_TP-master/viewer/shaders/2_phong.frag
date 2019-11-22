@@ -133,9 +133,9 @@ void main( void )
      /// we must normalise vectors before using them in case they change
 
      /********** Normalize *******************/
-     normalize(vertNormal);
-     normalize(eyeVector);
-     normalize(lightVector);
+     vec4 vertNormalN = normalize(vertNormal);
+     vec4 eyeVectorN = normalize(eyeVector);
+     vec4 lightVectorN = normalize(lightVector);
 
      /********** alpha ***********************/
      // alpha = 1-(shininess/200) in order to be between 0 and 1
@@ -145,7 +145,7 @@ void main( void )
      /********** Ambient light setup *********/
 
      // ambient reflection param 
-     float Ka = 0.7;
+     float Ka = 0.1;
      // setting the ambiantLighting - Ca
      vec4 ambientLight = Ka * vertColor * lightIntensity;
 
@@ -155,15 +155,15 @@ void main( void )
      // Diffuse reflection param 
      float Kd = 0.7;
      // setting the Diffuse lighting - Cd
-     vec4 diffuseLighting = Kd * vertColor * lightIntensity * max(EPS, dot(vertNormal, lightVector));
+     vec4 diffuseLighting = Kd * vertColor * lightIntensity * max(EPS, dot(vertNormalN, lightVectorN));
      
      
      /********** Specular light setup *********/
 
      // half Vector
-     vec4 halfVector = normalize(lightVector + eyeVector);
+     vec4 halfVector = normalize(lightVectorN + eyeVectorN);
      // ThetaD, angle between halfVector & lightVector we only need its cos value
-     float cosThethaD = dot(halfVector, lightVector); // /(length(halfVector)*length(lightVector)) ? what is the correct formula? OK because normalize :);
+     float cosThethaD = dot(halfVector, lightVectorN); // /(length(halfVector)*length(lightVector)) ? what is the correct formula? OK because normalize :);
      // setting the specular lighting - Cs
      vec4 specularLighting;
      // float temp = specularLightingCT(cosThethaD, halfVector);
@@ -178,19 +178,19 @@ void main( void )
      /************** 
      object color is the sum of ambient, specular and diffuse lights with the object base color 
      ***************/
-     // fragColor = ambientLight + diffuseLighting + specularLighting;
+     fragColor = ambientLight + diffuseLighting + specularLighting;
 
      // shadow mapping
      // http://www.opengl-tutorial.org/fr/intermediate-tutorials/tutorial-16-shadow-mapping/
      // https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping
      // https://learnopengl.com/Advanced-Lighting/Shadows/Point-Shadows
 
-     float depthValue = (texture(shadowMap, lightSpace.xy).z);
-     float distanceLightSource = lightSpace.z;
+     // float depthValue = (texture(shadowMap, lightSpace.xy).z);
+     // float distanceLightSource = lightSpace.z;
      
-     if(depthValue < distanceLightSource){
-          fragColor = ambientLight;
-     } else {
-          fragColor = ambientLight + diffuseLighting + specularLighting;
-     }
+     // if(depthValue < distanceLightSource){
+     //      fragColor = ambientLight;
+     // } else {
+     //      fragColor = ambientLight + diffuseLighting + specularLighting;
+     // }
 }
