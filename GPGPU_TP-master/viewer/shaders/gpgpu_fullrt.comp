@@ -81,7 +81,7 @@ float fresnelCoeff(float cosThethaD, float etaN){
 /* compute ambient lighting when the intersection is in the shadow of a light */
 vec4 computeAmbientLighting(in vec4 vertColor){
     // ambient reflection param 
-     float Ka = 0.2;
+     float Ka = 0.1;
      // setting the ambiantLighting - Ca
      vec4 ambientLight = Ka * lightIntensity * vertColor;
     return ambientLight;
@@ -91,7 +91,7 @@ vec4 computeAmbientLighting(in vec4 vertColor){
 vec4 computeDiffuseLighting(in vec4 vertColor, in vec4 vertNormal, in vec4 lightVector){
     vec4 diffuseLighting;
     // Diffuse reflection param 
-    float Kd = 0.7;
+    float Kd = 0.5;
     // setting the Diffuse lighting - Cd
     diffuseLighting = Kd * vertColor * lightIntensity * max(EPS, dot(vertNormal, lightVector));
     return diffuseLighting;
@@ -301,13 +301,14 @@ bool rayPlaneIntersect(in vec4 start, in vec4 u, out float lambda){
 
     // compute intersection
     vec4 PQ = (Q-start);
-    lambda = (dot(PQ,n)/dot(u,n));
-    if(dot(u,n)>0){
-        lambda = -lambda;
-    }
-    if(dot(u,n)>EPS){
+    if(abs(dot(u,n))<EPS){
         return false;
     }
+    lambda = (dot(PQ,n)/dot(u,n));
+    // if(dot(u,n)>0){
+    //     lambda = -lambda;
+    // }
+    
     if(lambda > 0){
         return true;
     } else {
@@ -321,10 +322,20 @@ bool isIntersected(vec4 origin, vec4 dir, out hitinfo_t h)
     vec4 dist; // stores distance + barycentric coord
 	bool hit = false;
 	h.t.x = radius * MAX_SCENE_BOUNDS;
-    float minLambda = 30000000.;
-    float lambdaSol = 30000000.;
-    
+    float minLambda = radius * MAX_SCENE_BOUNDS;
+    float lambdaSol = radius * MAX_SCENE_BOUNDS;
+    bool intersectSol = rayPlaneIntersect(origin, dir, lambdaSol);
+    int lastHit = h.hit_vptr;
     // see if the ray intersect the box
+    if(intersectSol){
+        if(lambdaSol<minLambda && lambdaSol >0.01 ){
+            h.t = origin + lambdaSol*dir;
+            h.hit_vptr = -1;
+            h.plan = true;
+            hit = true;
+            minLambda = lambdaSol;
+        }
+    }
 	if(intersectBoundingBox(origin, dir)) {
 		for(int j = 0; j < indices.length(); j += 3) {
             // see if the ray intersect the triangle
@@ -333,24 +344,18 @@ bool isIntersected(vec4 origin, vec4 dir, out hitinfo_t h)
                 // lambda for P+lambda*u (intersection)
                 // alpha beta for coord in (v0,v1,v2)
                 // j: ptr for the triangle
-                if(dist.w < minLambda ){
+                if(dist.w < minLambda && j != lastHit){
                     h.t = origin + dist.w*dir;//dist;
                     h.hit_vptr = j;
                     h.coeffs = dist.xyz;
                     minLambda = dist.w;
                     hit = true;
+                    h.plan = false;
                 }
             }
 		}
     }
-    if(rayPlaneIntersect(origin, dir, lambdaSol)){
-        if((lambdaSol<minLambda || hit == false) && lambdaSol >0.01 ){
-            h.t = origin + lambdaSol*dir;
-            h.hit_vptr = -1;
-            h.plan = true;
-            hit = true;
-        }
-    }
+    
 	return hit;
 }
 
@@ -387,9 +392,9 @@ vec4 trace(vec4 origin, vec4 dir)
         // color
         if(h.plan){
             vertColor = texture2D(colorTexture,h.t.xz/100.);
-            if(counter >=1){
-                vertColor = vec4(1,0,0,1);
-            }
+            // if(counter >=1){
+            //     vertColor = vec4(1,0,0,1);
+            // }
             vertNormal = vec4(0,1,0,1);
             h.hit_vptr = -1;
         } else {
@@ -420,7 +425,11 @@ vec4 trace(vec4 origin, vec4 dir)
         }
         // new origin
         origin = h.t;
-        dir = normalize(reflect(dir,vertNormal));
+        if(h.plan){
+            dir = normalize(reflect(dir,vertNormal));
+        }else{
+            dir = normalize(reflect(eyeVector,vertNormal));
+        }
         h.plan = false;
         // intersectionInfos[counter].Colors = dir;
         if(counter <limit){

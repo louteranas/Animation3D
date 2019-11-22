@@ -38,7 +38,7 @@ void main( void )
     // screen space, so all other calculus do not GET the perspective 
     // matrix
     
-    lightVector = normalize(vertexPositionCS - lightPosCS);
+    lightVector = normalize(lightPosCS - vertexPositionCS);
     vec4 eyePosition = vec4(0.0, 0.0, 0.0, 1.0);
     eyeVector = normalize(eyePosition - vertexPositionCS);
 

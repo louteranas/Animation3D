@@ -21,6 +21,10 @@ out vec4 fragColor;
 
 
 #define EPS                 0.000001
+/********** Normalize *******************/
+vec4 vertNormalN = normalize(vertNormal);
+vec4 eyeVectorN = normalize(eyeVector);
+vec4 lightVectorN = normalize(lightVector);
 /**
 * this fuction calculate the Fresnet Coefficient when eta is complexe
 * For more details about the variable names, check the TP page
@@ -106,9 +110,9 @@ float GGXDistrib(float cosTheta, float alpha){
 **/
 vec4 specularLightingBP(float cosThethaD, vec4 halfVector){
      if(etaComplex > 0.1)
-          return fresnetCoeffCmp(cosThethaD) * vertColor * pow(max(EPS, dot(vertNormal, halfVector)), shininess) * lightIntensity;
+          return fresnetCoeffCmp(cosThethaD) * vertColor * pow(max(EPS, dot(vertNormalN, halfVector)), shininess) * lightIntensity;
      else
-          return fresnetCoeffRl(cosThethaD) * vertColor * pow(max(EPS, dot(vertNormal, halfVector)), shininess) * lightIntensity;
+          return fresnetCoeffRl(cosThethaD) * vertColor * pow(max(EPS, dot(vertNormalN, halfVector)), shininess) * lightIntensity;
 }
 
 /**
@@ -116,9 +120,9 @@ vec4 specularLightingBP(float cosThethaD, vec4 halfVector){
 * For more details about the variable names, check the TP page
 **/
 vec4 specularLightingCT(float cosThethaD, vec4 halfVector, float alpha){
-     float cosThetaH = dot(vertNormal,halfVector);
-     float cosThetaI = dot(vertNormal,lightVector);
-     float cosThetaO = dot(vertNormal,eyeVector);
+     float cosThetaH = dot(vertNormalN,halfVector);
+     float cosThetaI = dot(vertNormalN,lightVectorN);
+     float cosThetaO = dot(vertNormalN,eyeVectorN);
      float top = fresnetCoeffRl(cosThethaD) * NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
      if(etaComplex > 0.1)
           top = fresnetCoeffCmp(cosThethaD) * NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
@@ -132,10 +136,7 @@ void main( void )
      // This is the place where there's work to be done
      /// we must normalise vectors before using them in case they change
 
-     /********** Normalize *******************/
-     normalize(vertNormal);
-     normalize(eyeVector);
-     normalize(lightVector);
+     
 
      /********** alpha ***********************/
      // alpha = 1-(shininess/200) in order to be between 0 and 1
@@ -145,7 +146,7 @@ void main( void )
      /********** Ambient light setup *********/
 
      // ambient reflection param 
-     float Ka = 0.7;
+     float Ka = 0.1;
      // setting the ambiantLighting - Ca
      vec4 ambientLight = Ka * vertColor * lightIntensity;
 
@@ -153,17 +154,17 @@ void main( void )
      /********** Diffuse light setup *********/
 
      // Diffuse reflection param 
-     float Kd = 0.7;
+     float Kd = 0.5;
      // setting the Diffuse lighting - Cd
-     vec4 diffuseLighting = Kd * vertColor * lightIntensity * max(EPS, dot(vertNormal, lightVector));
+     vec4 diffuseLighting = Kd * vertColor * lightIntensity * max(EPS, dot(vertNormalN, lightVectorN));
      
      
      /********** Specular light setup *********/
 
      // half Vector
-     vec4 halfVector = normalize(lightVector + eyeVector);
-     // ThetaD, angle between halfVector & lightVector we only need its cos value
-     float cosThethaD = dot(halfVector, lightVector); // /(length(halfVector)*length(lightVector)) ? what is the correct formula? OK because normalize :);
+     vec4 halfVector = normalize(lightVectorN + eyeVectorN);
+     // ThetaD, angle between halfVector & lightVectorN we only need its cos value
+     float cosThethaD = dot(halfVector, lightVectorN); // /(length(halfVector)*length(lightVectorN)) ? what is the correct formula? OK because normalize :);
      // setting the specular lighting - Cs
      vec4 specularLighting;
      // float temp = specularLightingCT(cosThethaD, halfVector);
@@ -178,19 +179,19 @@ void main( void )
      /************** 
      object color is the sum of ambient, specular and diffuse lights with the object base color 
      ***************/
-     // fragColor = ambientLight + diffuseLighting + specularLighting;
+     fragColor = ambientLight + diffuseLighting + specularLighting;
 
      // shadow mapping
      // http://www.opengl-tutorial.org/fr/intermediate-tutorials/tutorial-16-shadow-mapping/
      // https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping
      // https://learnopengl.com/Advanced-Lighting/Shadows/Point-Shadows
 
-     float depthValue = (texture(shadowMap, lightSpace.xy).z);
-     float distanceLightSource = lightSpace.z;
+     // float depthValue = (texture(shadowMap, lightSpace.xy).z);
+     // float distanceLightSource = lightSpace.z;
      
-     if(depthValue < distanceLightSource){
-          fragColor = ambientLight;
-     } else {
-          fragColor = ambientLight + diffuseLighting + specularLighting;
-     }
+     // if(depthValue < distanceLightSource){
+     //      fragColor = ambientLight;
+     // } else {
+     //      fragColor = ambientLight + diffuseLighting + specularLighting;
+     // }
 }
