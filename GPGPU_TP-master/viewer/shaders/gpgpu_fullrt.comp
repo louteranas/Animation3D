@@ -18,6 +18,7 @@ uniform vec3 center;
 uniform bool blinnPhong;
 uniform bool transparent;
 uniform int numBounds;
+uniform int alternating;
 
 #define limit 5
 #define MAX_SCENE_BOUNDS    10.0
@@ -509,7 +510,13 @@ vec4 trace(vec4 origin, vec4 dir)
 
 layout (local_size_x = 8, local_size_y = 8) in;
 void main(void) {
-    ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 pix;
+    if(alternating > 0){
+        pix = ivec2(alternating*gl_GlobalInvocationID.xy);
+    } else {
+        pix = ivec2(gl_GlobalInvocationID.xy);
+    }
+    
     ivec2 size = imageSize(framebuffer);
     if (pix.x >= size.x || pix.y >= size.y) {
         return;
@@ -529,5 +536,16 @@ void main(void) {
     vec4 eye = (mat_inverse * vec4(0, 0, 0, 1));
     vec4 color = trace(eye, dir);
 
-    imageStore(framebuffer, pix, color);
+    // alternating rendering
+    if(alternating > 0){
+        // put the same color for all the pixels around
+        for(int i = 0; i <= alternating; i++){
+            for(int j = 0; j <= alternating; j++){
+                imageStore(framebuffer, ivec2(pix.x+i,pix.y+j), color);
+            }
+        }
+    } else {
+        imageStore(framebuffer, pix, color);
+    }
+
 }
