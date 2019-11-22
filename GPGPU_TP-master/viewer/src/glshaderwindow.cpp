@@ -33,7 +33,7 @@ glShaderWindow::glShaderWindow(QWindow *parent)
       environmentMap(0), texture(0), permTexture(0), pixels(0), mouseButton(Qt::NoButton), auxWidget(0),
       isGPGPU(false), hasComputeShaders(false), blinnPhong(true), transparent(true), eta(1.5), etaComplex(0.0), lightIntensity(1.0f), shininess(50.0f), lightDistance(5.0f), groundDistance(0.78),
       shadowMap_fboId(0), shadowMap_rboId(0), shadowMap_textureId(0), fullScreenSnapshots(false), computeResult(0), 
-      m_indexBuffer(QOpenGLBuffer::IndexBuffer), ground_indexBuffer(QOpenGLBuffer::IndexBuffer), precShader(""), isMoving(false), numBounds(1)
+      m_indexBuffer(QOpenGLBuffer::IndexBuffer), ground_indexBuffer(QOpenGLBuffer::IndexBuffer), precShader(""), isMoving(false), numBounds(1), alternatingRendering(0), interactivityMove(0)
 {
     // Default values you might want to tinker with
     shadowMapDimension = 2048;
@@ -199,6 +199,24 @@ void glShaderWindow::opaqueClicked()
     renderNow();
 }
 
+void glShaderWindow::interactivityMoveNothingClicked()
+{
+    interactivityMove = 0;
+    renderNow();
+}
+
+void glShaderWindow::interactivityMovePhongClicked()
+{
+    interactivityMove = 1;
+    renderNow();
+}
+
+void glShaderWindow::interactivityMoveAlternatingClicked()
+{
+    interactivityMove = 2;
+    renderNow();
+}
+
 void glShaderWindow::updateLightIntensity(int lightSliderValue)
 {
     lightIntensity = lightSliderValue / 100.0;
@@ -208,6 +226,12 @@ void glShaderWindow::updateLightIntensity(int lightSliderValue)
 void glShaderWindow::updateNumberOfBounds(int numBoundsSliderValue)
 {
     numBounds = numBoundsSliderValue;
+    renderNow();
+}
+
+void glShaderWindow::updateAlternatingRendering(int alternatingRenderingSliderValue)
+{
+    alternatingRendering = alternatingRenderingSliderValue*2;
     renderNow();
 }
 
@@ -265,6 +289,24 @@ QWidget *glShaderWindow::makeAuxWindow()
     vbox2->addWidget(transparent2);
     groupBox2->setLayout(vbox2);
     buttons->addWidget(groupBox2);
+
+    QGroupBox *groupBox3 = new QGroupBox("Interactivity:");
+    QRadioButton *mode0 = new QRadioButton("&Nothing");
+    QRadioButton *mode1 = new QRadioButton("&Phong");
+    QRadioButton *mode2 = new QRadioButton("&Rendering");
+    if (interactivityMove == 0) mode0->setChecked(true);
+    else if (interactivityMove == 1) mode1->setChecked(true);
+    else mode2->setChecked(true);
+    connect(mode0, SIGNAL(clicked()), this, SLOT(interactivityMoveNothingClicked()));
+    connect(mode1, SIGNAL(clicked()), this, SLOT(interactivityMovePhongClicked()));
+    connect(mode2, SIGNAL(clicked()), this, SLOT(interactivityMoveAlternatingClicked()));
+    QVBoxLayout *vbox3 = new QVBoxLayout;
+    vbox3->addWidget(mode0);
+    vbox3->addWidget(mode1);
+    vbox3->addWidget(mode2);
+    groupBox3->setLayout(vbox3);
+    buttons->addWidget(groupBox3);
+    
     outer->addLayout(buttons);
 
     // Color picker
@@ -379,6 +421,23 @@ QWidget *glShaderWindow::makeAuxWindow()
     hboxBounds->addWidget(numBoundsLabelValue);
     outer->addLayout(hboxBounds);
     outer->addWidget(numBoundslider);
+
+    // alternating rendering
+    QSlider* alternatingSlider = new QSlider(Qt::Horizontal);
+    alternatingSlider->setTickPosition(QSlider::TicksBelow);
+    alternatingSlider->setMinimum(0);
+    alternatingSlider->setMaximum(4);
+    alternatingSlider->setSliderPosition(alternatingRendering);
+    connect(alternatingSlider,SIGNAL(valueChanged(int)),this,SLOT(updateAlternatingRendering(int)));
+    QLabel* alternatingLabel = new QLabel("Alternating Rendering = ");
+    QLabel* alternatingLabelValue = new QLabel();
+    alternatingLabelValue->setNum(alternatingRendering);
+    connect(alternatingSlider,SIGNAL(valueChanged(int)),alternatingLabelValue,SLOT(setNum(int)));
+    QHBoxLayout *hboxRender = new QHBoxLayout;
+    hboxRender->addWidget(alternatingLabel);
+    hboxRender->addWidget(alternatingLabelValue);
+    outer->addLayout(hboxRender);
+    outer->addWidget(alternatingSlider);
 
     auxWidget->setLayout(outer);
     return auxWidget;
@@ -1089,14 +1148,21 @@ void glShaderWindow::wheelEvent(QWheelEvent * ev)
     // when the mouse is wheeling, we just take the phong shader to have a better speed
     // we keep in memory the last shader
     // Pay attention to not do that when the last shader is concerning the spheres
-    if(precShader == "gpgpu_fullrt" && !transparent){
-        isMoving = true;
-        QString shader = "2_phong";
-        QString precShaderTemp = precShader;
-        setShader(shader);
-        precShader = precShaderTemp;
+    if(precShader == "gpgpu_fullrt"){
+        if(interactivityMove == 1){
+            isMoving = true;
+            QString shader = "2_phong";
+            QString precShaderTemp = precShader;
+            setShader(shader);
+            precShader = precShaderTemp;
+        }
+        if(interactivityMove == 2){
+            isMoving = true;
+            alternatingRendering = 4;
+        }
     }
-    if(precShader == "2_phong" && !transparent){
+
+    if(precShader == "2_phong" && interactivityMove == 1){
         isMoving = true;
         QString shader = "1_simple";
         QString precShaderTemp = precShader;
@@ -1127,34 +1193,37 @@ void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
     // when the mouse is moving
     if (mouseButton == Qt::NoButton){
         // if there is no button, we just take the last shader (only if it has moved before)
-        if(isMoving && !transparent){
-            setShader(precShader);
-            //setShaderLater(precShader);
-            //glActiveTexture(GL_TEXTURE0);
-            // the shader wants a texture. We load one.
-            // if (texture) {
-            //     texture->setWrapMode(QOpenGLTexture::Repeat);
-            //     texture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
-            //     texture->setMagnificationFilter(QOpenGLTexture::Linear);
-            //     texture->bind(0);
-            // }
+        if(isMoving){
+            if(interactivityMove == 1){
+                setShader(precShader);
+            }
+            if(interactivityMove == 2){
+                alternatingRendering = 1;
+                setShader(precShader);
+            }
             isMoving = false;
         }
-
         return;
     }
 
     // else, we take the phong model to increase the speed of rendering
     // memorizing the last shader used
     // Pay attention to do that only when the last shader is the compute shader
-    if(precShader == "gpgpu_fullrt" && !transparent){
-        isMoving = true;
-        QString shader = "2_phong";
-        QString precShaderTemp = precShader;
-        setShader(shader);
-        precShader = precShaderTemp;
+    if(precShader == "gpgpu_fullrt"){
+        if(interactivityMove == 1){
+            isMoving = true;
+            QString shader = "2_phong";
+            QString precShaderTemp = precShader;
+            setShader(shader);
+            precShader = precShaderTemp;
+        }
+        if(interactivityMove == 2){
+            isMoving = true;
+            alternatingRendering = 4;
+        }
     }
-    if(precShader == "2_phong" && !transparent){
+
+    if(precShader == "2_phong" && interactivityMove == 1){
         isMoving = true;
         QString shader = "1_simple";
         QString precShaderTemp = precShader;
@@ -1262,6 +1331,7 @@ void glShaderWindow::render()
         compute_program->setUniformValue("lightIntensity", 1.0f);
         compute_program->setUniformValue("blinnPhong", blinnPhong);
         compute_program->setUniformValue("transparent", transparent);
+        compute_program->setUniformValue("alternating", alternatingRendering);
         compute_program->setUniformValue("lightIntensity", lightIntensity);
         compute_program->setUniformValue("shininess", shininess);
         compute_program->setUniformValue("eta", eta);
@@ -1269,8 +1339,18 @@ void glShaderWindow::render()
         compute_program->setUniformValue("framebuffer", 2);
         compute_program->setUniformValue("colorTexture", 0);
 		glBindImageTexture(2, computeResult->textureId(), 0, false, 0, GL_WRITE_ONLY, GL_RGBA32F);
-        int worksize_x = nextPower2(width());
-        int worksize_y = nextPower2(height());
+
+        // alternating rendering
+        int worksize_x;
+        int worksize_y;
+        if(alternatingRendering != 0){
+            worksize_x = nextPower2(width()/alternatingRendering);
+            worksize_y = nextPower2(height()/alternatingRendering);
+        } else {
+            worksize_x = nextPower2(width());
+            worksize_y = nextPower2(height());
+        }
+        
         glDispatchCompute(worksize_x / compute_groupsize_x, worksize_y / compute_groupsize_y, 1);
         glBindImageTexture(2, 0, 0, false, 0, GL_READ_ONLY, GL_RGBA32F); 
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);

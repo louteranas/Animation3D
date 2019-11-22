@@ -46,8 +46,12 @@ public slots:
     void blinnPhongClicked();
     void transparentClicked();
     void opaqueClicked();
+    void interactivityMoveNothingClicked();
+    void interactivityMovePhongClicked();
+    void interactivityMoveAlternatingClicked();
     void updateLightIntensity(int lightSliderValue);
     void updateNumberOfBounds(int numBoundsSliderValue);
+    void updateAlternatingRendering(int alternatingRenderingSliderValue);
     void updateShininess(int shininessSliderValue);
     void updateEta(int etaSliderValue);
     void updateEtaComplex(int etaComplexSliderValue);
@@ -107,6 +111,7 @@ private:
     // Parameters controlled by UI
     bool blinnPhong;
     bool transparent;
+    int interactivityMove;
     float eta;
     float etaComplex;
     float lightIntensity;
@@ -114,6 +119,7 @@ private:
     float lightDistance;
     float groundDistance;
     int numBounds;
+    int alternatingRendering;
 
 
     // OpenGL variables encapsulated by Qt
