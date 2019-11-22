@@ -21,6 +21,10 @@ out vec4 fragColor;
 
 
 #define EPS                 0.000001
+/********** Normalize *******************/
+vec4 vertNormalN = normalize(vertNormal);
+vec4 eyeVectorN = normalize(eyeVector);
+vec4 lightVectorN = normalize(lightVector);
 /**
 * this fuction calculate the Fresnet Coefficient when eta is complexe
 * For more details about the variable names, check the TP page
@@ -106,9 +110,9 @@ float GGXDistrib(float cosTheta, float alpha){
 **/
 vec4 specularLightingBP(float cosThethaD, vec4 halfVector){
      if(etaComplex > 0.1)
-          return fresnetCoeffCmp(cosThethaD) * vertColor * pow(max(EPS, dot(vertNormal, halfVector)), shininess) * lightIntensity;
+          return fresnetCoeffCmp(cosThethaD) * vertColor * pow(max(EPS, dot(vertNormalN, halfVector)), shininess) * lightIntensity;
      else
-          return fresnetCoeffRl(cosThethaD) * vertColor * pow(max(EPS, dot(vertNormal, halfVector)), shininess) * lightIntensity;
+          return fresnetCoeffRl(cosThethaD) * vertColor * pow(max(EPS, dot(vertNormalN, halfVector)), shininess) * lightIntensity;
 }
 
 /**
@@ -116,9 +120,9 @@ vec4 specularLightingBP(float cosThethaD, vec4 halfVector){
 * For more details about the variable names, check the TP page
 **/
 vec4 specularLightingCT(float cosThethaD, vec4 halfVector, float alpha){
-     float cosThetaH = dot(vertNormal,halfVector);
-     float cosThetaI = dot(vertNormal,lightVector);
-     float cosThetaO = dot(vertNormal,eyeVector);
+     float cosThetaH = dot(vertNormalN,halfVector);
+     float cosThetaI = dot(vertNormalN,lightVectorN);
+     float cosThetaO = dot(vertNormalN,eyeVectorN);
      float top = fresnetCoeffRl(cosThethaD) * NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
      if(etaComplex > 0.1)
           top = fresnetCoeffCmp(cosThethaD) * NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
@@ -132,10 +136,7 @@ void main( void )
      // This is the place where there's work to be done
      /// we must normalise vectors before using them in case they change
 
-     /********** Normalize *******************/
-     vec4 vertNormalN = normalize(vertNormal);
-     vec4 eyeVectorN = normalize(eyeVector);
-     vec4 lightVectorN = normalize(lightVector);
+     
 
      /********** alpha ***********************/
      // alpha = 1-(shininess/200) in order to be between 0 and 1
@@ -153,7 +154,7 @@ void main( void )
      /********** Diffuse light setup *********/
 
      // Diffuse reflection param 
-     float Kd = 0.7;
+     float Kd = 0.5;
      // setting the Diffuse lighting - Cd
      vec4 diffuseLighting = Kd * vertColor * lightIntensity * max(EPS, dot(vertNormalN, lightVectorN));
      
@@ -162,8 +163,8 @@ void main( void )
 
      // half Vector
      vec4 halfVector = normalize(lightVectorN + eyeVectorN);
-     // ThetaD, angle between halfVector & lightVector we only need its cos value
-     float cosThethaD = dot(halfVector, lightVectorN); // /(length(halfVector)*length(lightVector)) ? what is the correct formula? OK because normalize :);
+     // ThetaD, angle between halfVector & lightVectorN we only need its cos value
+     float cosThethaD = dot(halfVector, lightVectorN); // /(length(halfVector)*length(lightVectorN)) ? what is the correct formula? OK because normalize :);
      // setting the specular lighting - Cs
      vec4 specularLighting;
      // float temp = specularLightingCT(cosThethaD, halfVector);
