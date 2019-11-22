@@ -32,8 +32,15 @@ void main( void )
     vertNormal.w = 0.0;
     textCoords = texcoords;
 
-    // // TODO: compute eyeVector, lightVector. 
-    // lightSpace = perspectiveLight * matrixLight * vec4(textCoords,0,0);
+    // shadow mapping
+    lightSpace = perspectiveLight * matrixLight * vertex;
+
+    vec4 lightPosCS = matrix * vec4(lightPosition,1);
+    vec4 vertexPositionCS = matrix * vertex;
+    
+    lightVector = normalize(lightPosCS - vertexPositionCS);
+    vec4 eyePosition = vec4(0.0, 0.0, 0.0, 1.0);
+    eyeVector = normalize(eyePosition - vertexPositionCS); 
 
     gl_Position = perspective * matrix * vertex;
 }

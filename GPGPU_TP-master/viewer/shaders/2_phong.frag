@@ -180,7 +180,7 @@ void main( void )
      if(shadowMapping){
           float depthValue = (texture(shadowMap, lightSpace.xy).z);
           float distanceLightSource = lightSpace.z;
-
+          
           if(depthValue < distanceLightSource){
                fragColor = ambientLight;
           } else {

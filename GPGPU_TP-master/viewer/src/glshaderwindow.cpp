@@ -1281,6 +1281,8 @@ void glShaderWindow::interactivity(){
             QString precShaderTemp = precShader;
             setShader(shader);
             precShader = precShaderTemp;
+        } else {
+            renderNow();
         }
 
     } else {
@@ -1480,6 +1482,7 @@ void glShaderWindow::render()
         ground_program->setUniformValue("eta", eta);
         ground_program->setUniformValue("etaComplex", etaComplex);
         ground_program->setUniformValue("radius", modelMesh->bsphere.r);
+        ground_program->setUniformValue("shadowMapping", shadowMapping);
 		if (ground_program->uniformLocation("colorTexture") != -1) ground_program->setUniformValue("colorTexture", 0);
         if (ground_program->uniformLocation("shadowMap") != -1) {
             ground_program->setUniformValue("shadowMap", 2);
