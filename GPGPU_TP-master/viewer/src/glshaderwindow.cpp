@@ -33,7 +33,7 @@ glShaderWindow::glShaderWindow(QWindow *parent)
       environmentMap(0), texture(0), permTexture(0), pixels(0), mouseButton(Qt::NoButton), auxWidget(0),
       isGPGPU(false), hasComputeShaders(false), blinnPhong(true), transparent(true), eta(1.5), etaComplex(0.0), lightIntensity(1.0f), shininess(50.0f), lightDistance(5.0f), groundDistance(0.78),
       shadowMap_fboId(0), shadowMap_rboId(0), shadowMap_textureId(0), fullScreenSnapshots(false), computeResult(0), 
-      m_indexBuffer(QOpenGLBuffer::IndexBuffer), ground_indexBuffer(QOpenGLBuffer::IndexBuffer), precShader(""), isMoving(false), numBounds(1), alternatingRendering(0), interactivityMove(0),
+      m_indexBuffer(QOpenGLBuffer::IndexBuffer), ground_indexBuffer(QOpenGLBuffer::IndexBuffer), precShader(""), isMoving(false), numBounds(1), ratioRendering(4), alternatingRendering(0), interactivityMove(0),
       precRendering(0), shadowMapping(false)
 {
     // Default values you might want to tinker with
@@ -237,17 +237,18 @@ void glShaderWindow::updateLightIntensity(int lightSliderValue)
     // renderNow();
 }
 
+void glShaderWindow::updateRatioRendering(int ratioRenderingSliderValue)
+{
+    ratioRendering = ratioRenderingSliderValue*2;
+    interactivity();
+    // renderNow();
+}
+
 void glShaderWindow::updateNumberOfBounds(int numBoundsSliderValue)
 {
     numBounds = numBoundsSliderValue;
     interactivity();
     // renderNow();
-}
-
-void glShaderWindow::updateAlternatingRendering(int alternatingRenderingSliderValue)
-{
-    alternatingRendering = alternatingRenderingSliderValue*2;
-    renderNow();
 }
 
 void glShaderWindow::updateShininess(int shininessSliderValue)
@@ -457,11 +458,11 @@ QWidget *glShaderWindow::makeAuxWindow()
     alternatingSlider->setTickPosition(QSlider::TicksBelow);
     alternatingSlider->setMinimum(0);
     alternatingSlider->setMaximum(4);
-    alternatingSlider->setSliderPosition(alternatingRendering);
-    connect(alternatingSlider,SIGNAL(valueChanged(int)),this,SLOT(updateAlternatingRendering(int)));
-    QLabel* alternatingLabel = new QLabel("Alternating Rendering = ");
+    alternatingSlider->setSliderPosition(ratioRendering);
+    connect(alternatingSlider,SIGNAL(valueChanged(int)),this,SLOT(updateRatioRendering(int)));
+    QLabel* alternatingLabel = new QLabel("Ratio for alternating rendering during moving * 2 = ");
     QLabel* alternatingLabelValue = new QLabel();
-    alternatingLabelValue->setNum(alternatingRendering);
+    alternatingLabelValue->setNum(ratioRendering);
     connect(alternatingSlider,SIGNAL(valueChanged(int)),alternatingLabelValue,SLOT(setNum(int)));
     QHBoxLayout *hboxRender = new QHBoxLayout;
     hboxRender->addWidget(alternatingLabel);
@@ -1203,12 +1204,12 @@ void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
     // when the mouse is moving
     if (mouseButton == Qt::NoButton){
         //if there is no button, we just take the last shader (only if it has moved before)
-        if(isMoving){
-            if(interactivityMove == 1){
-                setShader(precShader);
-            }
-            isMoving = false;
-        }
+        // if(isMoving){
+        //     if(interactivityMove == 1){
+        //         setShader(precShader);
+        //     }
+        //     isMoving = false;
+        // }
         return;
     }
 
@@ -1260,7 +1261,7 @@ void glShaderWindow::mouseReleaseEvent(QMouseEvent *e)
 void glShaderWindow::interactivity(){
     if(precShader == "gpgpu_fullrt"){
         if(interactivityMove == 2){
-            alternatingRendering = 8;
+            alternatingRendering = ratioRendering;
             renderNow();
             if(!timerId.empty()){
                 timerId.clear();
@@ -1271,6 +1272,8 @@ void glShaderWindow::interactivity(){
             QString precShaderTemp = precShader;
             setShader(shader);
             precShader = precShaderTemp;
+            isMoving = true;
+            timerId.push_back(startTimer(1000));
         } else {
             renderNow();
         }
@@ -1281,6 +1284,7 @@ void glShaderWindow::interactivity(){
             QString precShaderTemp = precShader;
             setShader(shader);
             precShader = precShaderTemp;
+            timerId.push_back(startTimer(1000));
         } else {
             renderNow();
         }
@@ -1295,13 +1299,17 @@ void glShaderWindow::timerEvent(QTimerEvent *e)
 {
     int t = timerId.back();
     if (e->timerId() == t){
-        for(int i = alternatingRendering; i >= 1; i-=2){
-            alternatingRendering = i;
+        if(interactivityMove == 2){
+            for(int i = alternatingRendering; i >= 0; i-=2){
+                alternatingRendering = i;
+                renderNow();
+                timerId.push_back(startTimer(100));
+            }
+        } else if (interactivityMove == 1 && isMoving){
+            setShader(precShader);
             renderNow();
-            timerId.push_back(startTimer(100));
+            isMoving = false;
         }
-        // alternatingRendering = precRendering;
-        // renderLater();
         timerId.pop_back();
         killTimer(t);
     }

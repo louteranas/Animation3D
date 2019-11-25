@@ -54,7 +54,7 @@ public slots:
     void interactivityMoveAlternatingClicked();
     void updateLightIntensity(int lightSliderValue);
     void updateNumberOfBounds(int numBoundsSliderValue);
-    void updateAlternatingRendering(int alternatingRenderingSliderValue);
+    void updateRatioRendering(int ratioRenderingSliderValue);
     void updateShininess(int shininessSliderValue);
     void updateEta(int etaSliderValue);
     void updateEtaComplex(int etaComplexSliderValue);
@@ -123,6 +123,7 @@ private:
     float lightDistance;
     float groundDistance;
     int numBounds;
+    int ratioRendering;
     int alternatingRendering;
     int precRendering;
     std::vector<int> timerId;
