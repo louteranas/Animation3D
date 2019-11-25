@@ -246,7 +246,7 @@ void glShaderWindow::updateRatioRendering(int ratioRenderingSliderValue)
 
 void glShaderWindow::updateNumberOfBounds(int numBoundsSliderValue)
 {
-    numBounds = numBoundsSliderValue;
+    numBounds = numBoundsSliderValue+1;
     interactivity();
     // renderNow();
 }
@@ -439,11 +439,11 @@ QWidget *glShaderWindow::makeAuxWindow()
     // numBounds
     QSlider* numBoundslider = new QSlider(Qt::Horizontal);
     numBoundslider->setTickPosition(QSlider::TicksBelow);
-    numBoundslider->setMinimum(1);
-    numBoundslider->setMaximum(10);
-    numBoundslider->setSliderPosition(numBounds);
+    numBoundslider->setMinimum(0);
+    numBoundslider->setMaximum(9);
+    numBoundslider->setSliderPosition(numBounds-1);
     connect(numBoundslider,SIGNAL(valueChanged(int)),this,SLOT(updateNumberOfBounds(int)));
-    QLabel* numBoundsLabel = new QLabel("Number of Bounds = ");
+    QLabel* numBoundsLabel = new QLabel("Number of Bounds for reflection = ");
     QLabel* numBoundsLabelValue = new QLabel();
     numBoundsLabelValue->setNum(numBounds-1);
     connect(numBoundslider,SIGNAL(valueChanged(int)),numBoundsLabelValue,SLOT(setNum(int)));
@@ -460,7 +460,7 @@ QWidget *glShaderWindow::makeAuxWindow()
     alternatingSlider->setMaximum(4);
     alternatingSlider->setSliderPosition(ratioRendering);
     connect(alternatingSlider,SIGNAL(valueChanged(int)),this,SLOT(updateRatioRendering(int)));
-    QLabel* alternatingLabel = new QLabel("Ratio for alternating rendering during moving * 2 = ");
+    QLabel* alternatingLabel = new QLabel("Ratio for alternating rendering during moving (* 2) = ");
     QLabel* alternatingLabelValue = new QLabel();
     alternatingLabelValue->setNum(ratioRendering);
     connect(alternatingSlider,SIGNAL(valueChanged(int)),alternatingLabelValue,SLOT(setNum(int)));

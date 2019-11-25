@@ -1,5 +1,5 @@
 #version 410
-#define M_PI 3.14159265358979323846
+#define M_PI 3.1415926538
 
 // uniform color models
 uniform float lightIntensity;
@@ -142,7 +142,7 @@ float getCosThetha(vec3 normal, vec3 u){
 /* compute ambient lighting when the intersection is in the shadow of a light */
 vec4 computeAmbientLighting(in vec4 vColor){
     // ambient reflection param 
-     float Ka = 0.2;
+     float Ka = 0.1;
      // setting the ambiantLighting - Ca
      vec4 ambientLight = Ka * lightIntensity * vColor;
     return ambientLight;
@@ -152,7 +152,7 @@ vec4 computeAmbientLighting(in vec4 vColor){
 vec4 computeDiffuseLighting(in vec4 vColor,in vec4 vertNormal, in vec4 lightVector){
     vec4 diffuseLighting;
     // Diffuse reflection param 
-    float Kd = 0.7;
+    float Kd = 0.5;
     // setting the Diffuse lighting - Cd
     diffuseLighting = Kd * vColor * lightIntensity * max(EPS, dot(vertNormal, lightVector));
     return diffuseLighting;
