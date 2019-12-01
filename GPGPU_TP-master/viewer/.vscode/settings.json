@@ -1,6 +1,9 @@
 {
     "files.associations": {
         "qslider": "cpp",
-        "qscreen": "cpp"
+        "qscreen": "cpp",
+        "deque": "cpp",
+        "string": "cpp",
+        "vector": "cpp"
     }
 }

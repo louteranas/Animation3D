@@ -1277,19 +1277,21 @@ void glShaderWindow::interactivity(){
         } else {
             renderNow();
         }
-    } else if(precShader == "2_phong") {
-        if(interactivityMove == 1){
-            isMoving = true;
-            QString shader = "1_simple";
-            QString precShaderTemp = precShader;
-            setShader(shader);
-            precShader = precShaderTemp;
-            timerId.push_back(startTimer(1000));
-        } else {
-            renderNow();
-        }
+    } 
+    // else if(precShader == "2_phong") {
+    //     if(interactivityMove == 1){
+    //         isMoving = true;
+    //         QString shader = "1_simple";
+    //         QString precShaderTemp = precShader;
+    //         setShader(shader);
+    //         precShader = precShaderTemp;
+    //         timerId.push_back(startTimer(1000));
+    //     } else {
+    //         renderNow();
+    //     }
 
-    } else {
+    // } 
+    else {
         renderNow();
     }
 
@@ -1305,10 +1307,22 @@ void glShaderWindow::timerEvent(QTimerEvent *e)
                 renderNow();
                 timerId.push_back(startTimer(100));
             }
+            if(alternatingRendering != 0){
+                alternatingRendering = 0;
+                renderNow();
+                timerId.push_back(startTimer(100));
+            }
         } else if (interactivityMove == 1 && isMoving){
+            int boundsLimit = numBounds;
+            numBounds = 0;
             setShader(precShader);
-            renderNow();
             isMoving = false;
+            for(int i = 1; i <= boundsLimit; i++){
+                numBounds = i;
+                renderNow();
+                timerId.push_back(startTimer(200));
+            }
+            numBounds = boundsLimit;
         }
         timerId.pop_back();
         killTimer(t);
