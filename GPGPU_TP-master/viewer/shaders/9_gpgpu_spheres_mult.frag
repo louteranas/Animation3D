@@ -163,7 +163,7 @@ vec4 computeDiffuseLighting(in vec4 vColor,in vec4 vertNormal, in vec4 lightVect
 * For more details about the variable names, check the TP page
 **/
 bool indicatrice(float cosThetaH){
-     if(cosThetaH < 0){
+     if(cosThetaH < EPS){
           return false;
      }
      return true;
@@ -187,8 +187,8 @@ float NormalDistrib(float cosThetaH, float alpha){
 **/
 float GGXDistrib(float cosTheta, float alpha){
      float tanThetaSquare = (1 - pow(cosTheta, 2))/pow(cosTheta, 2);
-     float base = 1 + sqrt(1 + tanThetaSquare * pow(alpha/100, 2));
-     return 2 / base;
+     float base = 1 + pow(max(1 + tanThetaSquare * pow(alpha/100, 2),0),0.5);
+     return 2. / base;
 }
 
 /**
@@ -207,7 +207,8 @@ vec4 specularLightingCT(in vec4 vColor, float cosThethaD, vec4 halfVector, float
      float cosThetaH = dot(normal,halfVector);
      float cosThetaI = dot(normal,lightVector);
      float cosThetaO = dot(normal,eyeVector);
-     float top = fresnelCoeff(cosThethaD,eta) * NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
+     float frenel = fresnelCoeff(cosThethaD,eta);
+     float top =  frenel* NormalDistrib(cosThetaH, alpha) * GGXDistrib(cosThetaI, alpha) * GGXDistrib(cosThetaO, alpha);
      float bottom = 4 * cosThetaI * cosThetaO;
      return (top/bottom)*vColor*lightIntensity;
 }
@@ -220,7 +221,7 @@ vec4 computeSpecularLighting(in vec4 vColor, in vec4 normal, in vec4 lightVector
     float alpha = (2.-shininess/100);
     
     // ThetaD, angle between normal & lightVector we only need its cos value
-    vec4 halfVector = normalize(lightVector + eyeVector);
+    vec4 halfVector = -normalize(-lightVector + eyeVector);
     float cosThethaD = dot(halfVector, lightVector); // /(length(halfVector)*length(lightVector)) ? what is the correct formula? OK because normalize :);
     if(blinnPhong)
         // using the blinn phong model
@@ -240,7 +241,7 @@ vec4 computeColorFromLightSource(in vec4 vColor,in bool intersect, in vec3 start
         - eyeVector = -1*u
     */
     vec4 vertNormal = normalize(vec4(normal.xyz,1.));
-    vec4 lightVector = normalize(vec4(lightPosition,1)-vec4(start,1));
+    vec4 lightVector = normalize(vec4(lightPosition-start,1));
     vec4 eyeVector = normalize(vec4(u,1));
 
     // ambient lighting
