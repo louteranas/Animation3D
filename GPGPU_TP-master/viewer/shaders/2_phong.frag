@@ -1,6 +1,14 @@
 #version 410
 #define PI 3.1415926538
+#define EPS 0.000001
 
+/****************************************************************************************************************************************************/
+/***************************************************************** PARAMETERS ***********************************************************************/
+/****************************************************************************************************************************************************/
+
+/* 
+* Parameters UNIFORM
+*/
 uniform float lightIntensity;
 uniform bool blinnPhong;
 uniform float shininess;
@@ -9,23 +17,37 @@ uniform float etaComplex;
 uniform sampler2D shadowMap;
 uniform bool shadowMapping;
 
+/** 
+* Parameters IN
+**/
 in vec4 eyeVector;
 in vec4 lightVector;
 in vec4 vertColor;
 in vec4 vertNormal;
 
-// shadow mapping
+/**
+* Parameters for for shadow mapping 
+**/
 in vec4 lightSpace;
 out vec4 positionScreen;
 
+/** 
+* Out: result color for the pixel 
+**/
 out vec4 fragColor;
 
-
-#define EPS                 0.000001
-/********** Normalize *******************/
+/**
+* Normalize
+**/
 vec4 vertNormalN = normalize(vertNormal);
 vec4 eyeVectorN = normalize(eyeVector);
 vec4 lightVectorN = normalize(lightVector);
+
+
+/****************************************************************************************************************************************************/
+/********************************************************* PHONG MODEL COMPUTATION ******************************************************************/
+/****************************************************************************************************************************************************/
+
 /**
 * this fuction calculate the Fresnet Coefficient when eta is complexe
 * For more details about the variable names, check the TP page
@@ -51,9 +73,6 @@ float fresnetCoeffCmp(float cosThethaD){
      return F;
 }
 
-
-
-
 /**
 * this fuction calculate the Fresnet Coefficient
 * For more details about the variable names, check the TP page
@@ -73,18 +92,21 @@ float fresnetCoeffRl(float cosThethaD){
 }
 
 /**
-* this fuction calculate the microfacet normal distribution D(thetaH)
+* this function computes the indicatrice of the cosThetaH (false if <0, true else)
 * For more details about the variable names, check the TP page
 **/
 bool indicatrice(float cosThetaH){
+     // theta is positive
      if(cosThetaH < 0){
           return false;
      }
      return true;
-     // maybe it's okay because theta is positive 
-     // if not, so the graph and lights are reversed and we have theta positive
 }
 
+/**
+* this fuction calculates the microfacet normal distribution D(thetaH)
+* For more details about the variable names, check the TP page
+**/
 float NormalDistrib(float cosThetaH, float alpha){
      if(!indicatrice(cosThetaH)){
           return 0;
@@ -131,18 +153,17 @@ vec4 specularLightingCT(float cosThethaD, vec4 halfVector, float alpha){
      return (top/bottom)*vertColor*lightIntensity;
 }
 
+/****************************************************************************************************************************************************/
+/********************************************************************** MAIN ************************************************************************/
+/****************************************************************************************************************************************************/
 
 void main( void )
 {
-     // This is the place where there's work to be done
-     /// we must normalise vectors before using them in case they change
-
-     
-
      /********** alpha ***********************/
      // alpha = 1-(shininess/200) in order to be between 0 and 1
      // shininess and alpha reversed
      float alpha = (2.-shininess/100);
+
 
      /********** Ambient light setup *********/
 
@@ -176,28 +197,23 @@ void main( void )
           // using the cook torrance model
           specularLighting = specularLightingCT(cosThethaD, halfVector, alpha);
 
-
+     /********** Shadow Mapping **************/
      if(shadowMapping){
+          // depth value from shadow map, using pixel in light space coordinates
           float depthValue = (texture(shadowMap, lightSpace.xy).z);
+          // distance between pixel position and light position
           float distanceLightSource = lightSpace.z;
           
-          if(depthValue < distanceLightSource){
+          // check if depth < distance
+          if(depthValue - distanceLightSource < EPS){
+               // object between the pixel and the light => color = shadow
                fragColor = ambientLight;
           } else {
+               // no object between the pixel and the light => color = phong model
                fragColor = ambientLight + diffuseLighting + specularLighting;
           }
      } else {
-          /************** 
-          object color is the sum of ambient, specular and diffuse lights with the object base color 
-          ***************/
+          // object color is the sum of ambient, specular and diffuse lights with the object base color 
           fragColor = ambientLight + diffuseLighting + specularLighting;
      }
-
-
-     // shadow mapping
-     // http://www.opengl-tutorial.org/fr/intermediate-tutorials/tutorial-16-shadow-mapping/
-     // https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping
-     // https://learnopengl.com/Advanced-Lighting/Shadows/Point-Shadows
-
-     
 }

@@ -1,5 +1,14 @@
 #version 410
+#define EPS 0.000001
+#define PI 3.1415926538
 
+/****************************************************************************************************************************************************/
+/***************************************************************** PARAMETERS ***********************************************************************/
+/****************************************************************************************************************************************************/
+
+/* 
+* Parameters UNIFORM
+*/
 uniform float lightIntensity;
 uniform sampler2D colorTexture;
 uniform bool blinnPhong;
@@ -8,6 +17,9 @@ uniform float eta;
 uniform sampler2D shadowMap;
 uniform bool shadowMapping;
 
+/* 
+* Parameters IN
+*/
 in vec4 eyeVector;
 in vec4 lightVector;
 in vec4 vertColor;
@@ -15,20 +27,18 @@ in vec4 vertNormal;
 in vec2 textCoords;
 in vec4 lightSpace;
 
-
+/* 
+* Parameters OUT: result color
+*/
 out vec4 fragColor;
 
-#define EPS                 0.000001
-#define PI 3.1415926538
-
-/********** Normalize *******************/
+/* 
+* Normalize
+*/
 vec4 vertNormalN = normalize(vertNormal);
 vec4 eyeVectorN = normalize(eyeVector);
 vec4 lightVectorN = normalize(lightVector);
-
 vec4 vertColorN = texture2D(colorTexture,textCoords);
-
-
 
 /**
 * this fuction calculate the Fresnet Coefficient
@@ -49,7 +59,7 @@ float fresnetCoeffRl(float cosThethaD){
 }
 
 /**
-* this fuction calculate the microfacet normal distribution D(thetaH)
+* this function computes the indicatrice of the cosThetaH (false if <0, true else)
 * For more details about the variable names, check the TP page
 **/
 bool indicatrice(float cosThetaH){
@@ -61,6 +71,10 @@ bool indicatrice(float cosThetaH){
      // if not, so the graph and lights are reversed and we have theta positive
 }
 
+/**
+* this fuction calculates the microfacet normal distribution D(thetaH)
+* For more details about the variable names, check the TP page
+**/
 float NormalDistrib(float cosThetaH, float alpha){
      if(!indicatrice(cosThetaH)){
           return 0;
@@ -102,6 +116,10 @@ vec4 specularLightingCT(float cosThethaD, vec4 halfVector, float alpha){
      return (top/bottom)*vertColorN*lightIntensity;
 }
 
+
+/****************************************************************************************************************************************************/
+/********************************************************************** MAIN ************************************************************************/
+/****************************************************************************************************************************************************/
 
 void main( void )
 {
