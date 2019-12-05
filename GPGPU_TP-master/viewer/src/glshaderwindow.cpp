@@ -200,30 +200,45 @@ void glShaderWindow::opaqueClicked()
     renderNow();
 }
 
+/*
+* Shadow map button 
+*/
 void glShaderWindow::shadowMapUnusedClicked()
 {
     shadowMapping = false;
     renderNow();
 }
 
+/*
+* Shadow map button 
+*/
 void glShaderWindow::shadowMapClicked()
 {
     shadowMapping = true;
     renderNow();
 }
 
+/*
+* Interactivity mode button : nothing
+*/
 void glShaderWindow::interactivityMoveNothingClicked()
 {
     interactivityMove = 0;
     renderNow();
 }
 
+/*
+* Interactivity mode button : Phong
+*/
 void glShaderWindow::interactivityMovePhongClicked()
 {
     interactivityMove = 1;
     renderNow();
 }
 
+/*
+* Interactivity mode button : alternating rendering
+*/
 void glShaderWindow::interactivityMoveAlternatingClicked()
 {
     interactivityMove = 2;
@@ -234,37 +249,38 @@ void glShaderWindow::updateLightIntensity(int lightSliderValue)
 {
     lightIntensity = lightSliderValue / 100.0;
     interactivity();
-    // renderNow();
 }
 
 void glShaderWindow::updateRatioRendering(int ratioRenderingSliderValue)
 {
     ratioRendering = ratioRenderingSliderValue*2;
     interactivity();
-    // renderNow();
 }
 
+/*
+* Num of bounds
+*/
 void glShaderWindow::updateNumberOfBounds(int numBoundsSliderValue)
 {
     numBounds = numBoundsSliderValue+1;
     interactivity();
-    // renderNow();
 }
 
 void glShaderWindow::updateShininess(int shininessSliderValue)
 {
     shininess = shininessSliderValue;
     interactivity();
-    // renderNow();
 }
 
 void glShaderWindow::updateEta(int etaSliderValue)
 {
     eta = etaSliderValue/100.0;
     interactivity();
-    // renderNow();
 }
 
+/*
+* eta complex button 
+*/
 void glShaderWindow::updateEtaComplex(int etaComplexSliderValue)
 {
     etaComplex = etaComplexSliderValue/100.0;
@@ -308,6 +324,9 @@ QWidget *glShaderWindow::makeAuxWindow()
     groupBox2->setLayout(vbox2);
     buttons->addWidget(groupBox2);
 
+    /*
+    * Interactivity mode button 
+    */
     QGroupBox *groupBox3 = new QGroupBox("Interactivity:");
     QRadioButton *mode0 = new QRadioButton("&Nothing");
     QRadioButton *mode1 = new QRadioButton("&Phong");
@@ -325,6 +344,9 @@ QWidget *glShaderWindow::makeAuxWindow()
     groupBox3->setLayout(vbox3);
     buttons->addWidget(groupBox3);
 
+    /*
+    * Shadow mapping button
+    */
     QGroupBox *groupBox4 = new QGroupBox("Shadow Mapping:");
     QRadioButton *shadow0 = new QRadioButton("&Nothing");
     QRadioButton *shadow1 = new QRadioButton("&ShadowMap");
@@ -339,32 +361,6 @@ QWidget *glShaderWindow::makeAuxWindow()
     buttons->addWidget(groupBox4);
     
     outer->addLayout(buttons);
-
-    // Color picker
-
-    // j'ai rajouté une autre version et la récupération de la couleur
-
-    // en gros il y a 3 problèmes:
-    // 1) les couleurs ne s'actualisent pas quand on modifie dans le widget
-    //      il faut surement mettre des connect
-    // 2) ça ne va pas jusqu'au modèle car on a pas mis de update comme en dessous
-    //      il faut ajouter des variables green, blue, red dans la classe et les actualiser comme le 
-    //      update de shininess/lightIntensity
-    // 3) dans la version Alexis, c'est moche et ça prend trop de place
-    //      dans la version Anas, le boutton ne marche pas donc on peut pas modifier la couleur
-    
-
-    // // VERSION ALEXIS
-    // QColorDialog* colorPick = new QColorDialog();
-    // colorPick->setOptions(QColorDialog::DontUseNativeDialog | QColorDialog::NoButtons);
-    // outer->addWidget(colorPick);
-    // QColor color = colorPick->getColor(Qt::white);
-    // QRgb rgbColor = color.rgb();
-    // int blue = qBlue(rgbColor);
-    // int green = qGreen(rgbColor);
-    // int red = qRed(rgbColor);
-    // std::cout << red << "," << green << "," << blue << "\n";
-
 
     // light source intensity
     QSlider* lightSlider = new QSlider(Qt::Horizontal);
@@ -458,7 +454,7 @@ QWidget *glShaderWindow::makeAuxWindow()
     alternatingSlider->setTickPosition(QSlider::TicksBelow);
     alternatingSlider->setMinimum(0);
     alternatingSlider->setMaximum(4);
-    alternatingSlider->setSliderPosition(ratioRendering);
+    alternatingSlider->setSliderPosition(ratioRendering/2.);
     connect(alternatingSlider,SIGNAL(valueChanged(int)),this,SLOT(updateRatioRendering(int)));
     QLabel* alternatingLabel = new QLabel("Ratio for alternating rendering during moving (* 2) = ");
     QLabel* alternatingLabelValue = new QLabel();
@@ -1176,9 +1172,6 @@ void glShaderWindow::mousePressEvent(QMouseEvent *e)
 void glShaderWindow::wheelEvent(QWheelEvent * ev)
 {
     // INTERACTIVITY
-    // when the mouse is wheeling, we just take the phong shader to have a better speed
-    // we keep in memory the last shader
-    // Pay attention to not do that when the last shader is concerning the spheres
     interactivity();
 
     int matrixMoving = 0;
@@ -1200,19 +1193,11 @@ void glShaderWindow::wheelEvent(QWheelEvent * ev)
 
 void glShaderWindow::mouseMoveEvent(QMouseEvent *e)
 {   
-    // INTERACTIVITY
-    // when the mouse is moving
     if (mouseButton == Qt::NoButton){
-        //if there is no button, we just take the last shader (only if it has moved before)
-        // if(isMoving){
-        //     if(interactivityMove == 1){
-        //         setShader(precShader);
-        //     }
-        //     isMoving = false;
-        // }
         return;
     }
 
+    // INTERACTIVITY
     interactivity();
 
     QVector2D mousePosition = (2.0/m_screenSize) * (QVector2D(e->localPos()) - QVector2D(0.5 * width(), 0.5*height()));
@@ -1258,40 +1243,43 @@ void glShaderWindow::mouseReleaseEvent(QMouseEvent *e)
     mouseButton = Qt::NoButton;
 }
 
+/*
+* INTERACTIVITY: allow alternating rendering or phong model when computing shader
+*/ 
 void glShaderWindow::interactivity(){
+    // if computing shader with ray tracing
     if(precShader == "gpgpu_fullrt"){
+        // if alternating rendering
         if(interactivityMove == 2){
+            // get the ratio wanted
             alternatingRendering = ratioRendering;
+            // render with this ratio
             renderNow();
+            // clear time id
             if(!timerId.empty()){
                 timerId.clear();
             }
+            // put the time event in the stack
             timerId.push_back(startTimer(1000));
+        // if phong rendering
         } else if (interactivityMove == 1) {
+            // new shader
             QString shader = "2_phong";
             QString precShaderTemp = precShader;
+            // set new shader
             setShader(shader);
+            // get the previous shader
             precShader = precShaderTemp;
             isMoving = true;
+            // put the time event in the stack
             timerId.push_back(startTimer(1000));
         } else {
+            // render
             renderNow();
         }
     } 
-    // else if(precShader == "2_phong") {
-    //     if(interactivityMove == 1){
-    //         isMoving = true;
-    //         QString shader = "1_simple";
-    //         QString precShaderTemp = precShader;
-    //         setShader(shader);
-    //         precShader = precShaderTemp;
-    //         timerId.push_back(startTimer(1000));
-    //     } else {
-    //         renderNow();
-    //     }
-
-    // } 
     else {
+        // render
         renderNow();
     }
 
@@ -1301,22 +1289,29 @@ void glShaderWindow::timerEvent(QTimerEvent *e)
 {
     int t = timerId.back();
     if (e->timerId() == t){
+        // if alternating rendering
         if(interactivityMove == 2){
+            // progressive rendering
             for(int i = alternatingRendering; i >= 0; i-=2){
                 alternatingRendering = i;
                 renderNow();
                 timerId.push_back(startTimer(100));
             }
+            // last render
             if(alternatingRendering != 0){
                 alternatingRendering = 0;
                 renderNow();
                 timerId.push_back(startTimer(100));
             }
         } else if (interactivityMove == 1 && isMoving){
+            // if phong rendering
+            // reduce num of bounds (get the old one on memory)
             int boundsLimit = numBounds;
             numBounds = 0;
+            // reset shader
             setShader(precShader);
             isMoving = false;
+            // rendering progressive with num of bounds
             for(int i = 1; i <= boundsLimit; i++){
                 numBounds = i;
                 renderNow();
@@ -1343,8 +1338,6 @@ static int nextPower2(int x) {
     x += 1;
     return x;
 }
-
-
 
 void glShaderWindow::render()
 {
@@ -1391,6 +1384,7 @@ void glShaderWindow::render()
         // alternating rendering
         int worksize_x;
         int worksize_y;
+        // divide the number of rendered pixels
         if(alternatingRendering != 0){
             worksize_x = nextPower2(width()/alternatingRendering);
             worksize_y = nextPower2(height()/alternatingRendering);
@@ -1415,21 +1409,15 @@ void glShaderWindow::render()
         glDisable(GL_CULL_FACE); // mainly because some models intersect with the ground
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         // set up camera position in light source:
-        // TODO_shadowMapping: you must initialize these two matrices.
-        //lightCoordMatrix.setToIdentity();
-        //lightPerspective.setToIdentity();
-        // float near_plane = 1.0f, far_plane = 25.0f;
-        lightCoordMatrix.lookAt(lightPosition,m_center, QVector3D(0.0,1.0,0.0));
-        lightPerspective.perspective(90, 1,1,25);
-
+        
+        // Shadow mapping: light coord and perspective matrix
         lightCoordMatrix.lookAt(lightPosition, 
                         lightPosition + QVector3D( 0.0f, -1.0f,  0.0f), 
                         QVector3D( 0.0f, 1.0f,  0.0f));
-
         lightPerspective.perspective(90.0f, 1.0, 1.0, 25.0);
-        
         shadowMapGenerationProgram->setUniformValue("matrix", lightCoordMatrix);
         shadowMapGenerationProgram->setUniformValue("perspective", lightPerspective);
+
         // Draw the entire scene:
         m_vao.bind();
         glDrawElements(GL_TRIANGLES, 3 * m_numFaces, GL_UNSIGNED_INT, 0);
