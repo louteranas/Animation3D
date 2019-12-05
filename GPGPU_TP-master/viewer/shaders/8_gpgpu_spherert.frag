@@ -175,11 +175,11 @@ vec4 computeResultColor(vec3 u, vec3 eye, int n){
         // if bounds and transparency:
         if(n != 0 && transparent && !(fresnelReflexion>1.)){
             // result = coeff fresnel * env map, and continue
-            result = fresnelReflexion * getColorFromEnvironment(normalize(reflectedRay));
+            result = fresnelReflexion * getColorFromEnvironnement(normalize(reflectedRay));
         }
         else{
             // result = env map and stop
-            return getColorFromEnvironment(normalize(reflectedRay));
+            return getColorFromEnvironnement(normalize(reflectedRay));
         }
         // new u
         u = normalize(refractedRay);
@@ -202,14 +202,14 @@ vec4 computeResultColor(vec3 u, vec3 eye, int n){
                 // if last coeff is not equal to 1
                 if(!(lastCoeff>1.)){
                     // result += coeff * envMap
-                    result = result + fresnelTrans * getColorFromEnvironment(refractedRay);
+                    result = result + fresnelTrans * getColorFromEnvironnement(refractedRay);
                 }
             }
         }
         resultColor = result;
     } else {
         // if no intersection: env map
-        resultColor = getColorFromEnvironment(u);
+        resultColor = getColorFromEnvironnement(u);
     }
     return resultColor;
 }
