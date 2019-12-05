@@ -166,7 +166,6 @@ void main( void )
 
 
      /********** Ambient light setup *********/
-
      // ambient reflection param 
      float Ka = 0.1;
      // setting the ambiantLighting - Ca
@@ -174,7 +173,6 @@ void main( void )
 
 
      /********** Diffuse light setup *********/
-
      // Diffuse reflection param 
      float Kd = 0.5;
      // setting the Diffuse lighting - Cd
@@ -182,7 +180,6 @@ void main( void )
      
      
      /********** Specular light setup *********/
-
      // half Vector
      vec4 halfVector = normalize(lightVectorN + eyeVectorN);
      // ThetaD, angle between halfVector & lightVectorN we only need its cos value

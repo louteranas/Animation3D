@@ -1,6 +1,14 @@
 #version 410
 #define M_PI 3.14159265358979323846
+#define EPS 0.000001
 
+/****************************************************************************************************************************************************/
+/***************************************************************** PARAMETERS ***********************************************************************/
+/****************************************************************************************************************************************************/
+
+/* 
+* Parameters UNIFORM
+*/
 uniform mat4 mat_inverse;
 uniform mat4 persp_inverse;
 uniform sampler2D envMap;
@@ -11,31 +19,48 @@ uniform bool transparent;
 uniform float shininess;
 uniform float eta;
 
+/* 
+* Parameters IN: position
+*/
 in vec4 position;
 
+/* 
+* Parameters OUT: result color
+*/
 out vec4 fragColor;
 
 
-#define EPS                 0.000001
+/****************************************************************************************************************************************************/
+/***************************************************************** ENV MAP **************************************************************************/
+/****************************************************************************************************************************************************/
 
-/* compute the color of the pixel of impact between the ray and the env Map*/
+/* 
+* compute the color of the pixel of impact between the ray and the env Map
+*/
 vec4 getColorFromEnvironment(in vec3 direction)
 {
-
     vec2 coord2D; 
     float thi; 
     float theta;  
     float scalar = dot(normalize(direction), vec3(0, -1, 0));
+
+    // compute thi and theta
     theta = acos(scalar); 
-    thi = atan(direction.x, direction.z); 
+    thi = atan(direction.x, direction.z);
+
+    // compute x,y in the env map, using thi and theta
     coord2D.x = 0.5 + thi/(2*M_PI); 
     coord2D.y = theta/M_PI; 
-
     return texture2D(envMap,coord2D);
 }
 
+/****************************************************************************************************************************************************/
+/***************************************************************** RAY TRACING **********************************************************************/
+/****************************************************************************************************************************************************/
 
-/* Compute delta = 4(CP dot u)² - 4(CP - r²) */
+/* 
+* Compute delta = 4(CP dot u)² - 4(CP - r²)
+*/
 float computeDelta(in vec3 cp, in float cpU){
     // CP
     float cpModule = length(cp);
@@ -48,8 +73,10 @@ float computeDelta(in vec3 cp, in float cpU){
     return 4.*cpUSquare-4.*(cpModuleSquare-radiusSquare);
 }
 
-/* find ray sphere intersection with start (eye), direction (u) and intersection (to be the result
-    return true if intersect, false if not */
+/* 
+* find ray sphere intersection with start (eye), direction (u) and intersection (to be the result
+*    return true if intersect, false if not
+*/
 bool raySphereIntersect(in vec3 start, in vec3 direction,in bool inside, out vec3 intersection) {
     // CP
     vec3 cp = start - center;
@@ -72,15 +99,23 @@ bool raySphereIntersect(in vec3 start, in vec3 direction,in bool inside, out vec
     return true;
 }
 
-/* compute cos theta d with u and n */
+/* 
+* compute cos theta d with u and n
+*/
 float getCosThetha(vec3 intersection, vec3 u, bool inside){
+    // normal
     vec3 normal = normalize(intersection - center);
+    // if inside the sphere
     if(inside){
         normal = normalize(center - intersection);
     }
+    // cos theta = abs((n.u))
     return abs(dot(normal, normalize(u)));
 }
 
+/* 
+* compute fresnel coefficients
+*/
 float fresnelCoeff(float cosThethaD, float etaN){
      // Ci coeff 
      float Ci = pow(max(EPS, (pow(etaN, 2) - (1 - pow(cosThethaD, 2)))), 0.5);
@@ -95,6 +130,9 @@ float fresnelCoeff(float cosThethaD, float etaN){
      return F;
 }
 
+/* 
+* compute reflected and refracted rays, using the glsl functions reflect and refract
+*/
 void computeReflectedRefractedRays(in vec3 intersection, in vec3 u, in float etaN, in bool inside, out vec3 reflectedRay, out vec3 refractedRay){
     // normal = intersection-center */
     vec3 normal = normalize(intersection - center);
@@ -108,52 +146,75 @@ void computeReflectedRefractedRays(in vec3 intersection, in vec3 u, in float eta
     
 }
 
-
-/* compute result color with n spheres */
+/* 
+* compute result color with n bounds
+*/
 vec4 computeResultColor(vec3 u, vec3 eye, int n){
-
-    // TODO
+    // parameters
     vec3 intersection;
     bool hasIntersect = raySphereIntersect(eye, u, false, intersection);
     vec4 resultColor;
     vec3 refractedRay;
     vec3 reflectedRay;
     
+    // if intersection for the first ray
     if(hasIntersect) {
         vec4 result;
-        // Step 4: compute reflected and refracted rays
+        // compute reflected and refracted rays
         computeReflectedRefractedRays(intersection, u, 1./eta, false, reflectedRay,refractedRay);
+        // compute costheta
         float cosThetha = getCosThetha(intersection, u, false);
+        // compute fresnel coeffs
         float fresnelReflexion = fresnelCoeff(cosThetha, eta);
         float fresnelTrans = 1 - fresnelReflexion;
+        // keep last transmission coeff
         float lastCoeff = fresnelTrans;
+        // if bounds and transparency:
         if(n != 0 && transparent && !(fresnelReflexion>1.)){
+            // result = coeff fresnel * env map, and continue
             result = fresnelReflexion * getColorFromEnvironment(normalize(reflectedRay));
         }
         else{
+            // result = env map and stop
             return getColorFromEnvironment(normalize(reflectedRay));
         }
+        // new u
         u = normalize(refractedRay);
+        // if bounds and transparency
         if(n >0 && transparent){
+            // for each bounds
             for(int i = 0; i<n; i++){
+                // intersection
                 hasIntersect = raySphereIntersect(intersection, u, true, intersection);
+                // reflected/refracted rays
                 computeReflectedRefractedRays(intersection, u, eta, true, reflectedRay,refractedRay);
+                // costheta
                 cosThetha = getCosThetha(intersection, u, true);
+                // fresnel coeff
                 fresnelReflexion = lastCoeff * fresnelCoeff(cosThetha, 1./eta);
                 fresnelTrans = lastCoeff - fresnelReflexion;
                 lastCoeff = fresnelReflexion;
+                // new u
                 u = normalize(reflectedRay);
+                // if last coeff is not equal to 1
                 if(!(lastCoeff>1.)){
-                result = result + fresnelTrans * getColorFromEnvironment(refractedRay);
+                    // result += coeff * envMap
+                    result = result + fresnelTrans * getColorFromEnvironment(refractedRay);
                 }
             }
         }
         resultColor = result;
     } else {
+        // if no intersection: env map
         resultColor = getColorFromEnvironment(u);
     }
     return resultColor;
 }
+
+
+/****************************************************************************************************************************************************/
+/********************************************************************** MAIN ************************************************************************/
+/****************************************************************************************************************************************************/
 
 void main(void)
 {

@@ -124,53 +124,57 @@ vec4 specularLightingCT(float cosThethaD, vec4 halfVector, float alpha){
 void main( void )
 {
 
-   /********** alpha ***********************/
-   // alpha = 1-(shininess/200) in order to be between 0 and 1
-   // shininess and alpha reversed
-   float alpha = (2.-shininess/100);
+     /********** alpha ***********************/
+     // alpha = 1-(shininess/200) in order to be between 0 and 1
+     // shininess and alpha reversed
+     float alpha = (2.-shininess/100);
 
-   /********** Ambient light setup *********/
-   // ambient reflection param 
-   float Ka = 0.1;
-   // setting the ambiantLighting - Ca
-   vec4 ambientLight = Ka * vertColorN * lightIntensity;
-   /********** Diffuse light setup *********/
-   // Diffuse reflection param 
-   float Kd = 0.5;
-   // setting the Diffuse lighting - Cd
-   vec4 diffuseLighting = Kd * vertColorN * lightIntensity * max(EPS, dot(vertNormalN, lightVectorN));
-   
-   
-   /********** Specular light setup *********/
-   // half Vector
-   vec4 halfVector = normalize(lightVectorN + eyeVectorN);
-   // ThetaD, angle between halfVector & lightVectorN we only need its cos value
-   float cosThethaD = dot(halfVector, lightVectorN); // /(length(halfVector)*length(lightVectorN)) ? what is the correct formula? OK because normalize :);
-   // setting the specular lighting - Cs
-   vec4 specularLighting;
-   // float temp = specularLightingCT(cosThethaD, halfVector);
-   if(blinnPhong)
-        // using the blinn phong model
-        specularLighting = specularLightingBP(cosThethaD, halfVector);
-   else
-        // using the cook torrance model
-        specularLighting = specularLightingCT(cosThethaD, halfVector, alpha);
+     /********** Ambient light setup *********/
+     // ambient reflection param 
+     float Ka = 0.1;
+     // setting the ambiantLighting - Ca
+     vec4 ambientLight = Ka * vertColorN * lightIntensity;
 
+     /********** Diffuse light setup *********/
+     // Diffuse reflection param 
+     float Kd = 0.5;
+     // setting the Diffuse lighting - Cd
+     vec4 diffuseLighting = Kd * vertColorN * lightIntensity * max(EPS, dot(vertNormalN, lightVectorN));
+     
+     /********** Specular light setup *********/
+     // half Vector
+     vec4 halfVector = normalize(lightVectorN + eyeVectorN);
+     // ThetaD, angle between halfVector & lightVectorN we only need its cos value
+     float cosThethaD = dot(halfVector, lightVectorN); // /(length(halfVector)*length(lightVectorN)) ? what is the correct formula? OK because normalize :);
+     // setting the specular lighting - Cs
+     vec4 specularLighting;
+     // float temp = specularLightingCT(cosThethaD, halfVector);
+     if(blinnPhong){
+          // using the blinn phong model
+          specularLighting = specularLightingBP(cosThethaD, halfVector);
+     } else {
+          // using the cook torrance model
+          specularLighting = specularLightingCT(cosThethaD, halfVector, alpha);
+     }
 
-   if(shadowMapping){
-        float depthValue = (texture(shadowMap, lightSpace.xy).z);
-        float distanceLightSource = lightSpace.z;
-        if(depthValue < distanceLightSource){
-             fragColor = ambientLight;
-        } else {
-             fragColor = ambientLight + diffuseLighting + specularLighting;
-        }
-      //   fragColor = vec4(1,0,0,1);
-   } else {
-        /************** 
-        object color is the sum of ambient, specular and diffuse lights with the object base color 
-        ***************/
+     /********** Shadow mapping *********/
+     if(shadowMapping)
+     {
+          // depth value from shadow map, using pixel in light space coordinates
+          float depthValue = (texture(shadowMap, lightSpace.xy).z);
+          // distance between pixel position and light position
+          float distanceLightSource = lightSpace.z;
+
+          // check if depth < distance
+          if(depthValue - distanceLightSource < EPS){
+               // object between the pixel and the light => color = shadow
+               fragColor = ambientLight;
+          } else {
+               // no object between the pixel and the light => color = phong
+               fragColor = ambientLight + diffuseLighting + specularLighting;
+     } else {
+        // object color is the sum of ambient, specular and diffuse lights with the object base color 
         fragColor = fragColor = texture2D(colorTexture,textCoords);
-   }
+     }
 
 }
