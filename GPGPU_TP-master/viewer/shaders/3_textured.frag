@@ -178,7 +178,6 @@ void main( void )
           //      fragColor = ambientLight + diffuseLighting + specularLighting;
           // }
 
-          //////////////////////////// ~ OK
           // depth value from shadow map, using pixel in light space coordinates
           float depthValue = (texture(shadowMap, lightSpace.xy).z);
           // distance between pixel position and light position
