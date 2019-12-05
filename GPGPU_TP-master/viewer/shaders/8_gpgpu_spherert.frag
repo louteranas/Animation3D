@@ -35,22 +35,25 @@ out vec4 fragColor;
 /****************************************************************************************************************************************************/
 
 /* 
-* compute the color of the pixel of impact between the ray and the env Map
+* compute color from the env map
 */
-vec4 getColorFromEnvironment(in vec3 direction)
-{
-    vec2 coord2D; 
-    float thi; 
-    float theta;  
+vec4 getColorFromEnvironnement(in vec3 direction){
+    // the env map is like an infinite sphere arround the world
+    // so the first thing to do is to transform the direction coords into 
+    //sheprique coords, then we know that thi is in -pi, pi 
+    //and Theta between 0 ans 2*Pi, so we transform this to get a value between 0 and 1 
+    // in order to be able to use the function Texture 2D that return the frag color coresponding
+    //point of the ray's impact with the env Map
+    vec2 coord2D; // our interpolated coords between 0 and 1  
+    float thi; // the angle between the X axis and the direction vector's pro111jection on the plane XY
+    float theta; // the angle between the Z axis and the direction vector 
+    // 
     float scalar = dot(normalize(direction), vec3(0, -1, 0));
+    theta = acos(scalar); // we change the direction of the vector to not get a flipped reflection
+    thi = atan(direction.x, direction.z); 
+    coord2D.x = 0.5 + thi/(2*M_PI); // projection on the interval 0-1
+    coord2D.y = theta/M_PI; // projection on the interval 0-1
 
-    // compute thi and theta
-    theta = acos(scalar); 
-    thi = atan(direction.x, direction.z);
-
-    // compute x,y in the env map, using thi and theta
-    coord2D.x = 0.5 + thi/(2*M_PI); 
-    coord2D.y = theta/M_PI; 
     return texture2D(envMap,coord2D);
 }
 

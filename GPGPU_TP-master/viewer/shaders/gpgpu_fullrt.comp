@@ -1,8 +1,18 @@
 #version 430 core
 #define M_PI 3.14159265358979323846
+#define limit 5
+#define MAX_SCENE_BOUNDS    10.0
+#define EPS                 0.000001
+
+/****************************************************************************************************************************************************/
+/***************************************************************** PARAMETERS ***********************************************************************/
+/****************************************************************************************************************************************************/
 
 layout(binding = 0, rgba32f) uniform writeonly image2D framebuffer;
 
+/* 
+* Parameters UNIFORM of the VAO
+*/
 uniform sampler2D colorTexture;
 uniform mat4 mat_inverse;
 uniform mat4 persp_inverse;
@@ -20,25 +30,26 @@ uniform bool transparent;
 uniform int numBounds;
 uniform int alternating;
 
-#define limit 5
-#define MAX_SCENE_BOUNDS    10.0
-#define EPS                 0.000001
-
-
+/* 
+* Structure hitinfo_t
+*/
 struct hitinfo_t {
-    vec4 t;
-    int hit_vptr;
-    vec3 coeffs;
-    bool plan;
+    vec4 t; // position of the hit
+    int hit_vptr; // index of the hit
+    vec3 coeffs; // coeffe with alpha and beta
+    bool plan; // if hit on a plan or not
 };
 
+/* 
+* Structure intersection
+*/
 struct intersection_t {
-        hitinfo_t h;
-        vec4 Normals;
-        vec4 Direction;
-        vec4 Colors;
-        vec4 Origin;
-        float Fresnel;
+        hitinfo_t h; // hit information
+        vec4 Normals; // normal of the intersection
+        vec4 Direction; // incoming ray of the intersection
+        vec4 Colors; // color at the intersection
+        vec4 Origin; // origin pos of the incoming ray
+        float Fresnel; // fresnel coeff
 };
 
 layout (std430, binding = 1) buffer Vertices
@@ -61,6 +72,15 @@ layout (std430, binding = 4) buffer Meshes
     int indices[];
 };
 
+
+/****************************************************************************************************************************************************/
+/************************************************************** COMPUTE LIGHTING ********************************************************************/
+/****************************************************************************************************************************************************/
+
+/**
+* this fuction calculate the Fresnet Coefficient
+* For more details about the variable names, check the TP page
+**/
 float fresnelCoeff(float cosThethaD, float etaN){
      // Ci coeff 
      float Ci = pow(max(EPS, (pow(etaN, 2) - (1 - pow(cosThethaD, 2)))), 0.5);
@@ -171,6 +191,14 @@ vec4 computeSpecularLighting(in vec4 vertColor, in vec4 normal, in vec4 lightVec
     return specularLighting; 
 }
 
+
+/****************************************************************************************************************************************************/
+/**************************************************************** RAY TRACING ***********************************************************************/
+/****************************************************************************************************************************************************/
+
+/**
+* Check if dir intersect the bounding box
+**/
 bool intersectBoundingBox(vec4 origin, vec4 dir) {
     /* check intersection between each plan: 
                 x*-orig.x = dir.x*(distance plan)
@@ -227,6 +255,9 @@ bool intersectBoundingBox(vec4 origin, vec4 dir) {
     return false;
 }
 
+/**
+* Check if dir intersect the triangle
+**/
 bool intersectTriangle(vec4 origin, vec4 dir, int ptr, out vec4 dist) 
 {
     // get V0,V1,V2 from vertices (with ptr)
@@ -271,6 +302,9 @@ bool intersectTriangle(vec4 origin, vec4 dir, int ptr, out vec4 dist)
     return true;
 }
 
+/**
+* Interpolate normals
+**/
 vec4 interpolateNormal(hitinfo_t h)
 {
 	// compute normal of the intersection
@@ -282,6 +316,9 @@ vec4 interpolateNormal(hitinfo_t h)
     return normal;
 }
 
+/**
+* Interpolate colors
+**/
 vec4 interpolateColor(hitinfo_t h)
 {
     // compute color of the intersection
@@ -305,10 +342,8 @@ bool rayPlaneIntersect(in vec4 start, in vec4 u, out float lambda){
         return false;
     }
     lambda = (dot(PQ,n)/dot(u,n));
-    // if(dot(u,n)>0){
-    //     lambda = -lambda;
-    // }
     
+    // if solution positive
     if(lambda > 0){
         return true;
     } else {
@@ -316,6 +351,9 @@ bool rayPlaneIntersect(in vec4 start, in vec4 u, out float lambda){
     }
 }
 
+/**
+* Check if dir is intersecting the box/triangle or the plan
+**/
 bool isIntersected(vec4 origin, vec4 dir, out hitinfo_t h)
 {
     h.plan = false;
@@ -361,7 +399,9 @@ bool isIntersected(vec4 origin, vec4 dir, out hitinfo_t h)
 
 const int MAX_TRACE = 1;
 
-// checks if a point is illuminated
+/**
+* checks if a point is illuminated
+**/
 bool inShadow(hitinfo_t startPoint){
     vec4 dir = normalize(-1*vec4(lightPosition - startPoint.t.xyz, 1));
     hitinfo_t newH;
@@ -374,8 +414,12 @@ bool inShadow(hitinfo_t startPoint){
     return pInShadow;
 }
 
+/**
+* Ray tracing and compute color of the ray
+**/
 vec4 trace(vec4 origin, vec4 dir)
 {
+    /* 1) COMPUTE RESULT COLOR */
     vec4 resultColor;
     bool hitFloorLast = false;
     intersection_t intersectionInfos[limit];
@@ -392,9 +436,6 @@ vec4 trace(vec4 origin, vec4 dir)
         // color
         if(h.plan){
             vertColor = texture2D(colorTexture,h.t.xz/100.);
-            // if(counter >=1){
-            //     vertColor = vec4(1,0,0,1);
-            // }
             vertNormal = vec4(0,1,0,1);
             h.hit_vptr = -1;
         } else {
@@ -402,9 +443,13 @@ vec4 trace(vec4 origin, vec4 dir)
             vertNormal = interpolateNormal(h);
         }
         
+        // normal
         intersectionInfos[counter].Normals = vertNormal;
+
+        // ambient ligthing
         vec4 ambientLighting = computeAmbientLighting(vertColor);
 
+        // in shadow: ambient lighting
         if(inShadow(h)){
             intersectionInfos[counter].Colors = ambientLighting;
         } else {
@@ -435,14 +480,12 @@ vec4 trace(vec4 origin, vec4 dir)
         if(counter <limit){
             intersect = isIntersected(origin, dir, h); 
         }
-        
         counter += 1;
     }
 
-
-    /* 3) COMPUTE RESULT COLOR */
+    /* 2) COMPUTE RESULT COLOR */
     // base: black
-    resultColor = vec4(0,0,0,1);//vec4(128, 128, 128, 1)/255.;
+    resultColor = vec4(0,0,0,1);
     
     // if one bound at least
     if(counter != 0){
@@ -461,6 +504,12 @@ vec4 trace(vec4 origin, vec4 dir)
 }
 
 layout (local_size_x = 8, local_size_y = 8) in;
+
+
+/****************************************************************************************************************************************************/
+/********************************************************************** MAIN ************************************************************************/
+/****************************************************************************************************************************************************/
+
 void main(void) {
     ivec2 pix;
     if(alternating > 0){
