@@ -161,7 +161,7 @@ void main( void )
      if(shadowMapping)
      {
           // ////////////////////////////// TO TEST
-          // // divide by w
+          // divide by w
           // vec3 coord = lightSpace.xyz/lightSpace.w;
           // // transform to [-1,1] then [0,1]
           // coord = coord * 0.5 + 0.5;
