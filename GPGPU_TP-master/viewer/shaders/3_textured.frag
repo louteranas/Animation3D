@@ -172,6 +172,7 @@ void main( void )
           } else {
                // no object between the pixel and the light => color = phong
                fragColor = ambientLight + diffuseLighting + specularLighting;
+          }
      } else {
         // object color is the sum of ambient, specular and diffuse lights with the object base color 
         fragColor = fragColor = texture2D(colorTexture,textCoords);
