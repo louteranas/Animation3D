@@ -160,38 +160,38 @@ void main( void )
      /********** Shadow mapping *********/
      if(shadowMapping)
      {
-          ////////////////////////////// TO TEST
-          // divide by w
-          vec3 coord = lightSpace.xyz/lightSpace.w;
-          // transform to [-1,1] then [0,1]
-          coord = coord * 0.5 + 0.5;
-          // depth value in shadow map
-          float depthValue = (texture(shadowMap, coord.xy).z);
-          // distance between pixel position and light position
-          float distanceLightSource = coord.z;
-          // check if depth < distance
-          if(depthValue - distanceLightSource < EPS){
-               // object between the pixel and the light => color = shadow
-               fragColor = ambientLight;
-          } else {
-               // no object between the pixel and the light => color = phong model
-               fragColor = ambientLight + diffuseLighting + specularLighting;
-          }
-
-          ////////////////////////////// ~ OK
-          // // depth value from shadow map, using pixel in light space coordinates
-          // float depthValue = (texture(shadowMap, lightSpace.xy).z);
+          // ////////////////////////////// TO TEST
+          // // divide by w
+          // vec3 coord = lightSpace.xyz/lightSpace.w;
+          // // transform to [-1,1] then [0,1]
+          // coord = coord * 0.5 + 0.5;
+          // // depth value in shadow map
+          // float depthValue = (texture(shadowMap, coord.xy).z);
           // // distance between pixel position and light position
-          // float distanceLightSource = lightSpace.z;
-
+          // float distanceLightSource = coord.z;
           // // check if depth < distance
           // if(depthValue - distanceLightSource < EPS){
           //      // object between the pixel and the light => color = shadow
           //      fragColor = ambientLight;
           // } else {
-          //      // no object between the pixel and the light => color = phong
+          //      // no object between the pixel and the light => color = phong model
           //      fragColor = ambientLight + diffuseLighting + specularLighting;
           // }
+
+          //////////////////////////// ~ OK
+          // depth value from shadow map, using pixel in light space coordinates
+          float depthValue = (texture(shadowMap, lightSpace.xy).z);
+          // distance between pixel position and light position
+          float distanceLightSource = lightSpace.z;
+
+          // check if depth < distance
+          if(depthValue - distanceLightSource < EPS){
+               // object between the pixel and the light => color = shadow
+               fragColor = ambientLight;
+          } else {
+               // no object between the pixel and the light => color = phong
+               fragColor = ambientLight + diffuseLighting + specularLighting;
+          }
      } else {
         // object color is the sum of ambient, specular and diffuse lights with the object base color 
         fragColor = fragColor = texture2D(colorTexture,textCoords);
