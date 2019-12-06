@@ -1411,8 +1411,8 @@ void glShaderWindow::render()
         // set up camera position in light source:
         
         // Shadow mapping: light coord and perspective matrix
-        lightCoordMatrix.lookAt(lightPosition,m_center, QVector3D(0.0,1.0,0.0));
-        lightPerspective.perspective(90, 1,1,25);
+        // lightCoordMatrix.lookAt(lightPosition,m_center, QVector3D(0.0,1.0,0.0));
+        // lightPerspective.perspective(90, 1,1,25);
 
         lightCoordMatrix.lookAt(lightPosition, 
                         lightPosition + QVector3D( 0.0f, -1.0f,  0.0f), 
