@@ -414,23 +414,23 @@ QWidget *glShaderWindow::makeAuxWindow()
     outer->addLayout(hboxEta);
     outer->addWidget(etaSlider);
 
-    // // Eta complex slider
-    // QSlider* etaComplexSlider = new QSlider(Qt::Horizontal);
-    // etaComplexSlider->setTickPosition(QSlider::TicksBelow);
-    // etaComplexSlider->setTickInterval(100);
-    // etaComplexSlider->setMinimum(0);
-    // etaComplexSlider->setMaximum(500);
-    // etaComplexSlider->setSliderPosition(etaComplex*100);
-    // connect(etaComplexSlider,SIGNAL(valueChanged(int)),this,SLOT(updateEtaComplex(int)));
-    // QLabel* etaComplexLabel = new QLabel("Eta (index of refraction) (complex) * 100 =");
-    // QLabel* etaComplexLabelValue = new QLabel();
-    // etaComplexLabelValue->setNum(etaComplex * 100);
-    // connect(etaComplexSlider,SIGNAL(valueChanged(int)),etaComplexLabelValue,SLOT(setNum(int)));
-    // QHBoxLayout *hboxEtaComplex= new QHBoxLayout;
-    // hboxEtaComplex->addWidget(etaComplexLabel);
-    // hboxEtaComplex->addWidget(etaComplexLabelValue);
-    // outer->addLayout(hboxEtaComplex);
-    // outer->addWidget(etaComplexSlider);
+    // Eta complex slider
+    QSlider* etaComplexSlider = new QSlider(Qt::Horizontal);
+    etaComplexSlider->setTickPosition(QSlider::TicksBelow);
+    etaComplexSlider->setTickInterval(100);
+    etaComplexSlider->setMinimum(0);
+    etaComplexSlider->setMaximum(500);
+    etaComplexSlider->setSliderPosition(etaComplex*100);
+    connect(etaComplexSlider,SIGNAL(valueChanged(int)),this,SLOT(updateEtaComplex(int)));
+    QLabel* etaComplexLabel = new QLabel("Eta (index of refraction) (complex) * 100 =");
+    QLabel* etaComplexLabelValue = new QLabel();
+    etaComplexLabelValue->setNum(etaComplex * 100);
+    connect(etaComplexSlider,SIGNAL(valueChanged(int)),etaComplexLabelValue,SLOT(setNum(int)));
+    QHBoxLayout *hboxEtaComplex= new QHBoxLayout;
+    hboxEtaComplex->addWidget(etaComplexLabel);
+    hboxEtaComplex->addWidget(etaComplexLabelValue);
+    outer->addLayout(hboxEtaComplex);
+    outer->addWidget(etaComplexSlider);
 
     // numBounds
     QSlider* numBoundslider = new QSlider(Qt::Horizontal);
